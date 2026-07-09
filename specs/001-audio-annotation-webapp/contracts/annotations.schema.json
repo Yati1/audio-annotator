@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://audio-annotator/contracts/annotations.schema.json",
+  "title": "Audio Annotator Bundle Manifest",
+  "description": "Schema for annotations.json inside a shareable bundle (zip).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schemaVersion", "project", "audio", "annotations"],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Bundle schema version. Readers reject newer-than-supported values."
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "title", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "title": { "type": "string", "minLength": 1 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "audio": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "fileName", "mimeType", "durationSec", "path"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "fileName": { "type": "string", "minLength": 1 },
+        "mimeType": {
+          "type": "string",
+          "enum": [
+            "audio/mpeg",
+            "audio/wav",
+            "audio/x-wav",
+            "audio/ogg",
+            "audio/mp4",
+            "audio/aac",
+            "audio/flac",
+            "audio/x-flac"
+          ]
+        },
+        "durationSec": { "type": "number", "minimum": 0 },
+        "byteSize": { "type": "integer", "minimum": 0 },
+        "path": { "type": "string", "pattern": "^audio/.+" }
+      }
+    },
+    "annotations": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/annotation" }
+    }
+  },
+  "definitions": {
+    "annotation": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "kind",
+        "startSec",
+        "endSec",
+        "note",
+        "authorName",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "kind": { "type": "string", "enum": ["point", "region"] },
+        "startSec": { "type": "number", "minimum": 0 },
+        "endSec": { "type": ["number", "null"], "minimum": 0 },
+        "note": { "type": "string", "minLength": 1 },
+        "authorName": { "type": "string", "minLength": 1 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "deleted": { "type": "boolean", "default": false },
+        "replies": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/reply" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "point" } } },
+          "then": { "properties": { "endSec": { "type": "null" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "region" } } },
+          "then": {
+            "properties": { "endSec": { "type": "number", "exclusiveMinimum": 0 } },
+            "required": ["endSec"]
+          }
+        }
+      ]
+    },
+    "reply": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "text", "authorName", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "text": { "type": "string", "minLength": 1 },
+        "authorName": { "type": "string", "minLength": 1 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "deleted": { "type": "boolean", "default": false }
+      }
+    }
+  }
+}
