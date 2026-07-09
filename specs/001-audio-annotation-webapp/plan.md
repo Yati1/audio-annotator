@@ -54,16 +54,16 @@ of annotations per project as a practical working range.
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 Evaluated against the Audio Annotator Constitution v1.0.0.
 
-| Principle | Gate | Status |
-|-----------|------|--------|
-| I. Code Quality | ESLint + Prettier + typescript-eslint enforced in CI; PR review required; modules single-responsibility (`audio`, `annotations`, `replies`, `bundle`, `storage`, `state`); public module interfaces documented via TSDoc | PASS |
-| II. Testing Standards | Vitest unit/component + Playwright e2e; critical paths (persistence, bundle export/import, merge-by-ID, audio load) have explicit tests; CI gate keeps main green; deterministic tests with fixed fixtures | PASS |
-| III. UX Consistency | Explicit loading/empty/error/success states (FR-022); confirmation on destructive actions (FR-023); keyboard + contrast baseline (FR-024); single consistent interaction model across the one view | PASS |
-| IV. Performance | < 100 ms interaction budget (SC-004); code-splitting + small deps (`fflate` over JSZip, no UI kit); progressive audio loading; budgets measured in CI via bundle-size check and Playwright timing assertions | PASS |
+| Principle             | Gate                                                                                                                                                                                                                     | Status |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| I. Code Quality       | ESLint + Prettier + typescript-eslint enforced in CI; PR review required; modules single-responsibility (`audio`, `annotations`, `replies`, `bundle`, `storage`, `state`); public module interfaces documented via TSDoc | PASS   |
+| II. Testing Standards | Vitest unit/component + Playwright e2e; critical paths (persistence, bundle export/import, merge-by-ID, audio load) have explicit tests; CI gate keeps main green; deterministic tests with fixed fixtures               | PASS   |
+| III. UX Consistency   | Explicit loading/empty/error/success states (FR-022); confirmation on destructive actions (FR-023); keyboard + contrast baseline (FR-024); single consistent interaction model across the one view                       | PASS   |
+| IV. Performance       | < 100 ms interaction budget (SC-004); code-splitting + small deps (`fflate` over JSZip, no UI kit); progressive audio loading; budgets measured in CI via bundle-size check and Playwright timing assertions             | PASS   |
 
 **Additional constraints**: Feature has spec + plan before implementation (this document);
 performance budgets and UX standards captured here and in the spec; each dependency is
@@ -76,15 +76,14 @@ Initial Constitution Check: **PASS** (no violations; Complexity Tracking not req
 Re-evaluated against v1.0.0 after producing `data-model.md`, `contracts/*`, and
 `quickstart.md`. No new violations introduced by the design.
 
-| Principle | Post-design evidence | Status |
-|-----------|----------------------|--------|
-| I. Code Quality | `contracts/storage-and-modules.md` defines documented, single-responsibility ports (`storage`, `audio`, `annotations`, `replies`, `bundle`); domain logic isolated from React/wavesurfer | PASS |
-| II. Testing Standards | `quickstart.md` scenarios A–G map to unit/integration/e2e tests; merge/validate/bundle codec are pure or port-injected with `fake-indexeddb`; critical paths covered | PASS |
-| III. UX Consistency | Error taxonomy in `bundle-format.md` + `StoragePort` typed `Result` feed explicit error states; destructive actions (delete → tombstone) confirmed; a11y scenario G | PASS |
-| IV. Performance | Blob/object-URL playback + separate audio store avoid loading binaries into metadata queries; `fflate`/`idb`/`zustand` chosen for size; `npm run size` budget gate | PASS |
+| Principle             | Post-design evidence                                                                                                                                                                     | Status |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| I. Code Quality       | `contracts/storage-and-modules.md` defines documented, single-responsibility ports (`storage`, `audio`, `annotations`, `replies`, `bundle`); domain logic isolated from React/wavesurfer | PASS   |
+| II. Testing Standards | `quickstart.md` scenarios A–G map to unit/integration/e2e tests; merge/validate/bundle codec are pure or port-injected with `fake-indexeddb`; critical paths covered                     | PASS   |
+| III. UX Consistency   | Error taxonomy in `bundle-format.md` + `StoragePort` typed `Result` feed explicit error states; destructive actions (delete → tombstone) confirmed; a11y scenario G                      | PASS   |
+| IV. Performance       | Blob/object-URL playback + separate audio store avoid loading binaries into metadata queries; `fflate`/`idb`/`zustand` chosen for size; `npm run size` budget gate                       | PASS   |
 
 Post-Design Constitution Check: **PASS**. Complexity Tracking remains empty.
-
 
 ## Project Structure
 
@@ -101,6 +100,7 @@ specs/[###-feature]/
 ```
 
 ### Source Code (repository root)
+
 ### Documentation (this feature)
 
 ```text

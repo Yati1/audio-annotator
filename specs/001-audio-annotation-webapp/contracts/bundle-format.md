@@ -19,6 +19,7 @@ channel (email, cloud drive) with no app or network (FR-018, FR-020, SC-007).
 ```
 
 Rules:
+
 - Exactly one `annotations.json` at the archive root.
 - Exactly one audio file under `audio/`; its name matches `audio.fileName` and its bytes
   are the original file (no re-encoding — FR-030 relies on native decoding).
@@ -88,6 +89,7 @@ Rules:
 ## Export contract
 
 Given the active Project, `exportBundle(project) -> Blob`:
+
 1. Serialize project/audio metadata + annotations (with nested replies) to `annotations.json`
    with the current `schemaVersion`. Tombstoned (`deleted: true`) items ARE included so
    deletions propagate on merge.
@@ -100,6 +102,7 @@ then `id`) so identical projects produce byte-comparable JSON (testability, Cons
 ## Import contract
 
 `importBundle(file) -> ImportResult` (see storage-and-modules.md `mergeProject`):
+
 1. Parse zip. If not a valid zip, or `annotations.json` missing, or the referenced audio
    entry missing ⇒ return a validation error; **do not** mutate existing local data (FR-026).
 2. Validate `annotations.json` against the schema. Unknown **newer** `schemaVersion` ⇒
@@ -112,14 +115,14 @@ then `id`) so identical projects produce byte-comparable JSON (testability, Cons
 
 ## Validation error taxonomy (surfaced as explicit error states, FR-022/FR-026)
 
-| Code | Condition |
-|------|-----------|
-| `E_NOT_ZIP` | File is not a readable zip archive |
-| `E_NO_MANIFEST` | `annotations.json` missing |
-| `E_NO_AUDIO` | Referenced `audio/` entry missing |
-| `E_SCHEMA` | `annotations.json` fails schema validation |
-| `E_VERSION` | `schemaVersion` newer than app supports |
-| `E_AUDIO_TYPE` | Audio MIME/type not in supported set (FR-030) |
+| Code            | Condition                                     |
+| --------------- | --------------------------------------------- |
+| `E_NOT_ZIP`     | File is not a readable zip archive            |
+| `E_NO_MANIFEST` | `annotations.json` missing                    |
+| `E_NO_AUDIO`    | Referenced `audio/` entry missing             |
+| `E_SCHEMA`      | `annotations.json` fails schema validation    |
+| `E_VERSION`     | `schemaVersion` newer than app supports       |
+| `E_AUDIO_TYPE`  | Audio MIME/type not in supported set (FR-030) |
 
 Versioning policy: `schemaVersion` is an integer. Additive fields do not bump it; readers
 ignore unknown fields. Breaking changes bump the integer and the app supports reading the

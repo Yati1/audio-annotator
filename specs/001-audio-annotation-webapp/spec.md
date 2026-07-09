@@ -18,7 +18,7 @@
 - Q: What maximum audio file size and duration must the app handle responsively? → A: No fixed ceiling — best-effort with graceful degradation; the app must not freeze and must communicate when a very large file may perform slowly, but no size/duration is guaranteed to be rejected.
 - Q: Which audio formats must the app accept for annotation? → A: Common browser-playable formats — MP3, WAV, OGG, M4A/AAC, and FLAC — relying on native browser decoding (no in-app transcoding).
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Annotate an audio file (Priority: P1)
 
@@ -138,7 +138,7 @@ audio, annotations, and threads are restored intact.
 - What happens when an annotation with an active reply thread is deleted? The system MUST
   warn that the discussion will be removed and require confirmation.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -222,7 +222,7 @@ audio, annotations, and threads are restored intact.
 - **FR-024**: Primary annotation and playback workflows MUST be operable via keyboard and
   meet baseline contrast expectations.
 
-### Key Entities *(include if feature involves data)*
+### Key Entities _(include if feature involves data)_
 
 - **Audio File**: The base audio being annotated. Attributes: identifier, source audio
   content, duration, creation time. Relationships: has many Annotations. Stored locally on
@@ -245,7 +245,7 @@ audio, annotations, and threads are restored intact.
   all of its Annotations and Replies. Shared out-of-app via external channels (email,
   cloud drive, etc.).
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
