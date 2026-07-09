@@ -5,7 +5,7 @@ place point and region annotations on the waveform timeline, discuss them in thr
 replies, and share your work by exporting a self-contained bundle that anyone can import
 — no accounts, no server, no network required after the first load.
 
-**Live app**: `https://<your-org>.github.io/audio-annotator/`
+**Live app**: `https://yati1.github.io/audio-annotator/`
 
 ## Features
 
