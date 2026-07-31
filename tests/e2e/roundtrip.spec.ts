@@ -12,7 +12,11 @@ test.describe('roundtrip', () => {
     await app.openAudioFixture(makeWavFile({ durationSec: 4 }));
     await app.transport.addPoint();
     await app.draftDialog.createWithNote('Exported point');
-    await app.annotations.itemByNote('Exported point').addReply('Exported reply');
+    const exportedItem = app.annotations.itemByNote('Exported point');
+    await exportedItem.addReply('Exported reply');
+    // Reply submission is fire-and-forget from the UI's perspective; wait for it to render
+    // before exporting so the store's in-memory state (what exportBundle reads) reflects it.
+    await expect(exportedItem.replies()).toHaveCount(1);
 
     const download = await app.importExport.exportBundle();
     const downloadPath = await download.path();

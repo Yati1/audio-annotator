@@ -24,6 +24,10 @@ test.describe('replies', () => {
   test('replies persist across reload', async ({ app }) => {
     const item = app.annotations.itemByNote('Anchor annotation');
     await item.addReply('Persisted reply');
+    // Reply submission is fire-and-forget from the UI's perspective (store.addReply isn't
+    // awaited by the click handler); wait for it to render before reloading so the
+    // underlying IndexedDB write (awaited inside the store action) has actually completed.
+    await expect(item.replies()).toHaveCount(1);
 
     await app.page.reload();
     await app.waveform.waitUntilReady();
