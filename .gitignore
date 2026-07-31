@@ -4,6 +4,7 @@ node_modules/
 # Build output
 dist/
 dist-ssr/
+tsconfig.tsbuildinfo
 
 # Test / tooling output
 coverage/
