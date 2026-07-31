@@ -73,9 +73,17 @@ export const useStore = create<AppState>((set, get) => ({
   repliesByAnnotation: {},
 
   async init() {
+    set({ status: 'loading' });
     await storage.init();
     const name = (await storage.getSession<string>('displayName')) ?? '';
     set({ displayName: name });
+
+    const restored = await restoreLatestProject();
+    if (!restored) {
+      set({ status: 'idle' });
+      return;
+    }
+    get().setLoadedProject(restored.full, restored.objectUrl);
   },
 
   async setDisplayName(name) {
@@ -323,6 +331,32 @@ async function persistReply(
     : [...list, reply];
   set({ repliesByAnnotation: map });
   await touchProject(get, set);
+}
+
+/** Restores the most-recently-updated project (audio + annotations + replies) on load. */
+async function restoreLatestProject(): Promise<{ full: FullProject; objectUrl: string } | null> {
+  const [latest] = await storage.listProjects();
+  if (!latest) return null;
+
+  const project = await storage.getProject(latest.id);
+  if (!project) return null;
+
+  const audioRecord = await storage.getAudio(project.audioId);
+  if (!audioRecord) return null;
+
+  const audio: AudioMeta = {
+    id: audioRecord.id,
+    fileName: audioRecord.fileName,
+    mimeType: audioRecord.mimeType,
+    durationSec: audioRecord.durationSec,
+    byteSize: audioRecord.byteSize,
+  };
+  const objectUrl = URL.createObjectURL(audioRecord.blob);
+
+  const annotations = await storage.listAnnotations(project.id);
+  const replyLists = await Promise.all(annotations.map((a) => storage.listReplies(a.id)));
+
+  return { full: { project, audio, annotations, replies: replyLists.flat() }, objectUrl };
 }
 
 async function touchProject(

@@ -154,7 +154,7 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
     return (
       <div className="waveform">
         {loading && <div className="waveform-loading">Rendering waveform…</div>}
-        <div ref={containerRef} className="waveform-canvas" />
+        <div ref={containerRef} className="waveform-canvas" data-testid="waveform-canvas" />
       </div>
     );
   },
