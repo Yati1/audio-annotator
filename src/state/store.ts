@@ -24,6 +24,7 @@ export interface AppState {
   notice: string | null;
 
   displayName: string;
+  authorId: string;
 
   project: Project | null;
   audio: AudioMeta | null;
@@ -66,6 +67,7 @@ export const useStore = create<AppState>((set, get) => ({
   error: null,
   notice: null,
   displayName: '',
+  authorId: '',
   project: null,
   audio: null,
   objectUrl: null,
@@ -76,7 +78,12 @@ export const useStore = create<AppState>((set, get) => ({
     set({ status: 'loading' });
     await storage.init();
     const name = (await storage.getSession<string>('displayName')) ?? '';
-    set({ displayName: name });
+    let authorId = await storage.getSession<string>('authorId');
+    if (!authorId) {
+      authorId = newId();
+      await storage.setSession('authorId', authorId);
+    }
+    set({ displayName: name, authorId });
 
     const restored = await restoreLatestProject();
     if (!restored) {
@@ -87,8 +94,14 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   async setDisplayName(name) {
-    set({ displayName: name });
-    await storage.setSession('displayName', name);
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const oldName = get().displayName;
+    set({ displayName: trimmed });
+    await storage.setSession('displayName', trimmed);
+
+    if (!oldName || oldName === trimmed) return;
+    await renameAuthoredContent(get, set, trimmed);
   },
 
   async loadAudioFile(file) {
@@ -142,10 +155,10 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   async addPoint(startSec, note) {
-    const { project, audio, displayName } = get();
+    const { project, audio, displayName, authorId } = get();
     if (!project || !audio) return null;
     const res = annotationService.createPoint(
-      { projectId: project.id, startSec, note, authorName: displayName || 'Anonymous' },
+      { projectId: project.id, startSec, note, authorName: displayName || 'Anonymous', authorId },
       audio.durationSec,
     );
     if (isErr(res)) {
@@ -157,10 +170,17 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   async addRegion(startSec, endSec, note) {
-    const { project, audio, displayName } = get();
+    const { project, audio, displayName, authorId } = get();
     if (!project || !audio) return null;
     const res = annotationService.createRegion(
-      { projectId: project.id, startSec, endSec, note, authorName: displayName || 'Anonymous' },
+      {
+        projectId: project.id,
+        startSec,
+        endSec,
+        note,
+        authorName: displayName || 'Anonymous',
+        authorId,
+      },
       audio.durationSec,
     );
     if (isErr(res)) {
@@ -192,11 +212,12 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   async addReply(annotationId, text) {
-    const { displayName } = get();
+    const { displayName, authorId } = get();
     const res = replyService.add({
       annotationId,
       text,
       authorName: displayName || 'Anonymous',
+      authorId,
     });
     if (isErr(res)) {
       set({ error: res.error.message });
@@ -331,6 +352,51 @@ async function persistReply(
     : [...list, reply];
   set({ repliesByAnnotation: map });
   await touchProject(get, set);
+}
+
+/**
+ * Rewrites `authorName` to `newName` on annotations/replies in the current project that
+ * this device authored (matched by `authorId`), so a rename reflects on past content
+ * without touching anything authored by someone else or in another project.
+ */
+async function renameAuthoredContent(
+  get: () => AppState,
+  set: (partial: Partial<AppState>) => void,
+  newName: string,
+): Promise<void> {
+  const { authorId, annotations, repliesByAnnotation } = get();
+  const now = nowIso();
+
+  const changedAnnotations = annotations.filter(
+    (a) => a.authorId === authorId && a.authorName !== newName,
+  );
+  if (changedAnnotations.length > 0) {
+    const updated = changedAnnotations.map((a) => ({ ...a, authorName: newName, updatedAt: now }));
+    await storage.putAnnotations(updated);
+    const byId = new Map(updated.map((a) => [a.id, a]));
+    set({ annotations: annotations.map((a) => byId.get(a.id) ?? a) });
+  }
+
+  const changedReplies: Reply[] = [];
+  const nextRepliesByAnnotation = { ...repliesByAnnotation };
+  for (const [annotationId, replies] of Object.entries(repliesByAnnotation)) {
+    if (!replies.some((r) => r.authorId === authorId && r.authorName !== newName)) continue;
+    const updatedList = replies.map((r) =>
+      r.authorId === authorId && r.authorName !== newName
+        ? { ...r, authorName: newName, updatedAt: now }
+        : r,
+    );
+    nextRepliesByAnnotation[annotationId] = updatedList;
+    changedReplies.push(...updatedList.filter((r, i) => r !== replies[i]));
+  }
+  if (changedReplies.length > 0) {
+    await storage.putReplies(changedReplies);
+    set({ repliesByAnnotation: nextRepliesByAnnotation });
+  }
+
+  if (changedAnnotations.length > 0 || changedReplies.length > 0) {
+    await touchProject(get, set);
+  }
 }
 
 /** Restores the most-recently-updated project (audio + annotations + replies) on load. */

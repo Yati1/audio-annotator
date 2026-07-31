@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import { DisplayNamePrompt } from './DisplayNamePrompt';
+import { DisplayNameControl } from './DisplayNameControl';
 import { WaveformPanel } from './WaveformPanel';
 import { TransportBar } from './TransportBar';
 import { DraftDialog } from './DraftDialog';
@@ -10,6 +11,7 @@ import type { WavFile } from '../fixtures/wav';
 /** Root composition object for the single-view app, mirroring src/components/* 1:1. */
 export class AppPage {
   readonly displayNamePrompt: DisplayNamePrompt;
+  readonly displayNameControl: DisplayNameControl;
   readonly waveform: WaveformPanel;
   readonly transport: TransportBar;
   readonly draftDialog: DraftDialog;
@@ -18,6 +20,7 @@ export class AppPage {
 
   constructor(readonly page: Page) {
     this.displayNamePrompt = new DisplayNamePrompt(page);
+    this.displayNameControl = new DisplayNameControl(page);
     this.waveform = new WaveformPanel(page);
     this.transport = new TransportBar(page);
     this.draftDialog = new DraftDialog(page);

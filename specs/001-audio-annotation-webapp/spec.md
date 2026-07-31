@@ -194,7 +194,13 @@ audio, annotations, and threads are restored intact.
   backend service.
 - **FR-021**: System MUST attribute annotations and replies to the participant who
   authored them, using the self-entered display name in effect at the time of authoring,
-  and MUST preserve that attribution through export and import.
+  and MUST preserve that attribution through export and import. Users MAY change their
+  display name at any time; doing so relabels the attribution on annotations and replies
+  they authored on the same device in the currently open project (matched by a local,
+  per-device author identifier — not the display name string itself, so it does not
+  relabel another participant's content). Content authored on a different device, in a
+  different project, or before this per-device identifier existed keeps its original
+  attribution.
 - **FR-025**: System MUST NOT require account creation, sign-in, or a backend service;
   all functionality operates locally in the browser.
 - **FR-026**: On import, System MUST validate the bundle and, if it is malformed or

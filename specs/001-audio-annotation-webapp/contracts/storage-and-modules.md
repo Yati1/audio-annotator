@@ -14,7 +14,7 @@ testable (Constitution I/II) and decoupled from React and from wavesurfer.
 | `audio`       | `id`  | —                                          | `{ id, fileName, mimeType, durationSec, byteSize, blob }` (audio `Blob`) |
 | `annotations` | `id`  | `projectId`, `[projectId+createdAt]`       | Annotation records (replies stored separately)                           |
 | `replies`     | `id`  | `annotationId`, `[annotationId+createdAt]` | Reply records                                                            |
-| `sessionMeta` | `key` | —                                          | Singleton UI/session values, e.g. `{ key: "displayName", value: "Sam" }` |
+| `sessionMeta` | `key` | —                                          | Singleton UI/session values, e.g. `{ key: "displayName", value: "Sam" }` or `{ key: "authorId", value: "<uuid>" }` |
 
 Notes:
 

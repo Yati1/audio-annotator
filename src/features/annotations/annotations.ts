@@ -21,6 +21,7 @@ export interface CreatePointInput {
   startSec: number;
   note: string;
   authorName: string;
+  authorId?: string;
 }
 
 export interface CreateRegionInput extends CreatePointInput {
@@ -80,6 +81,7 @@ export const annotationService: AnnotationService = {
       endSec: null,
       note: input.note.trim(),
       authorName: input.authorName,
+      authorId: input.authorId,
       createdAt: now,
       updatedAt: now,
       deleted: false,
@@ -97,6 +99,7 @@ export const annotationService: AnnotationService = {
       endSec: input.endSec,
       note: input.note.trim(),
       authorName: input.authorName,
+      authorId: input.authorId,
       createdAt: now,
       updatedAt: now,
       deleted: false,

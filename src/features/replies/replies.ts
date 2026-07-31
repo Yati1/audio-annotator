@@ -16,6 +16,7 @@ export interface AddReplyInput {
   annotationId: string;
   text: string;
   authorName: string;
+  authorId?: string;
 }
 
 export interface ReplyService {
@@ -36,6 +37,7 @@ export const replyService: ReplyService = {
       annotationId: input.annotationId,
       text: input.text.trim(),
       authorName: input.authorName,
+      authorId: input.authorId,
       createdAt: now,
       updatedAt: now,
       deleted: false,
