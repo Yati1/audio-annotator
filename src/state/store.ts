@@ -100,7 +100,7 @@ export const useStore = create<AppState>((set, get) => ({
     set({ displayName: trimmed });
     await storage.setSession('displayName', trimmed);
 
-    if (!oldName || oldName === trimmed) return;
+    if (oldName === trimmed) return;
     await renameAuthoredContent(get, set, trimmed);
   },
 
@@ -354,6 +354,18 @@ async function persistReply(
   await touchProject(get, set);
 }
 
+/** Authored records whose `authorId` matches, with `authorName`/`updatedAt` stamped anew. */
+function withRenamedAuthor<T extends { authorId?: string; authorName: string; updatedAt: string }>(
+  items: T[],
+  authorId: string,
+  newName: string,
+  now: string,
+): T[] {
+  return items
+    .filter((item) => item.authorId === authorId && item.authorName !== newName)
+    .map((item) => ({ ...item, authorName: newName, updatedAt: now }));
+}
+
 /**
  * Rewrites `authorName` to `newName` on annotations/replies in the current project that
  * this device authored (matched by `authorId`), so a rename reflects on past content
@@ -364,37 +376,33 @@ async function renameAuthoredContent(
   set: (partial: Partial<AppState>) => void,
   newName: string,
 ): Promise<void> {
-  const { authorId, annotations, repliesByAnnotation } = get();
+  const { authorId } = get();
   const now = nowIso();
 
-  const changedAnnotations = annotations.filter(
-    (a) => a.authorId === authorId && a.authorName !== newName,
-  );
-  if (changedAnnotations.length > 0) {
-    const updated = changedAnnotations.map((a) => ({ ...a, authorName: newName, updatedAt: now }));
-    await storage.putAnnotations(updated);
-    const byId = new Map(updated.map((a) => [a.id, a]));
-    set({ annotations: annotations.map((a) => byId.get(a.id) ?? a) });
+  const updatedAnnotations = withRenamedAuthor(get().annotations, authorId, newName, now);
+  if (updatedAnnotations.length > 0) {
+    await storage.putAnnotations(updatedAnnotations);
+    // Re-read state after the await: another action may have run concurrently while this
+    // write was in flight, and the merge must build on the latest state, not a stale snapshot.
+    const byId = new Map(updatedAnnotations.map((a) => [a.id, a]));
+    const fresh = get().annotations;
+    set({ annotations: fresh.map((a) => byId.get(a.id) ?? a).filter((a) => !a.deleted) });
   }
 
-  const changedReplies: Reply[] = [];
-  const nextRepliesByAnnotation = { ...repliesByAnnotation };
-  for (const [annotationId, replies] of Object.entries(repliesByAnnotation)) {
-    if (!replies.some((r) => r.authorId === authorId && r.authorName !== newName)) continue;
-    const updatedList = replies.map((r) =>
-      r.authorId === authorId && r.authorName !== newName
-        ? { ...r, authorName: newName, updatedAt: now }
-        : r,
-    );
-    nextRepliesByAnnotation[annotationId] = updatedList;
-    changedReplies.push(...updatedList.filter((r, i) => r !== replies[i]));
-  }
-  if (changedReplies.length > 0) {
-    await storage.putReplies(changedReplies);
-    set({ repliesByAnnotation: nextRepliesByAnnotation });
+  const allReplies = Object.values(get().repliesByAnnotation).flat();
+  const updatedReplies = withRenamedAuthor(allReplies, authorId, newName, now);
+  if (updatedReplies.length > 0) {
+    await storage.putReplies(updatedReplies);
+    const byId = new Map(updatedReplies.map((r) => [r.id, r]));
+    const fresh = get().repliesByAnnotation;
+    const next: Record<string, Reply[]> = {};
+    for (const [annotationId, list] of Object.entries(fresh)) {
+      next[annotationId] = list.map((r) => byId.get(r.id) ?? r);
+    }
+    set({ repliesByAnnotation: next });
   }
 
-  if (changedAnnotations.length > 0 || changedReplies.length > 0) {
+  if (updatedAnnotations.length > 0 || updatedReplies.length > 0) {
     await touchProject(get, set);
   }
 }
