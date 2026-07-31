@@ -29,7 +29,7 @@ export function TransportBar({
       >
         {playing ? '❚❚ Pause' : '► Play'}
       </button>
-      <span className="time" aria-live="off">
+      <span className="time" aria-live="off" data-testid="transport-time">
         {formatTime(currentSec)} / {formatTime(durationSec)}
       </span>
       <div className="transport-spacer" />

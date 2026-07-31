@@ -35,7 +35,7 @@ export function AnnotationList({
   }
 
   return (
-    <ul className="annotation-list" aria-label="Annotations">
+    <ul className="annotation-list" aria-label="Annotations" data-testid="annotation-list">
       {visible.map((a) => (
         <AnnotationItem
           key={a.id}

@@ -57,9 +57,10 @@ export function ImportExportControls(): ReactNode {
         accept=".aannz,.zip,application/zip"
         className="visually-hidden"
         onChange={onImportFile}
+        data-testid="import-bundle-input"
       />
       {message && (
-        <span className="io-message" role="status">
+        <span className="io-message" role="status" data-testid="io-message">
           {message}
         </span>
       )}

@@ -55,7 +55,11 @@ export function AnnotationItem({
   };
 
   return (
-    <li className={`annotation-item${selected ? ' selected' : ''}`}>
+    <li
+      className={`annotation-item${selected ? ' selected' : ''}`}
+      data-testid="annotation-item"
+      data-annotation-id={annotation.id}
+    >
       <div className="annotation-head">
         <button
           type="button"

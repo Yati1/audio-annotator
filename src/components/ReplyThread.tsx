@@ -32,7 +32,7 @@ export function ReplyThread({ replies, onAdd, onEdit, onDelete }: ReplyThreadPro
       {replies.length > 0 && (
         <ul className="reply-list">
           {replies.map((r) => (
-            <li key={r.id} className="reply">
+            <li key={r.id} className="reply" data-testid="reply-item" data-reply-id={r.id}>
               <div className="reply-head">
                 <span className="author">{r.authorName}</span>
                 <time dateTime={r.createdAt}>{replyTime(r.createdAt)}</time>

@@ -123,6 +123,7 @@ export function App(): ReactNode {
               accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac,.aac"
               className="visually-hidden"
               onChange={onPickFile}
+              data-testid="open-audio-input"
             />
           </label>
           <ImportExportControls />
@@ -175,7 +176,12 @@ export function App(): ReactNode {
             />
 
             {draft && (
-              <div className="draft-form" role="dialog" aria-label="New annotation">
+              <div
+                className="draft-form"
+                role="dialog"
+                aria-label="New annotation"
+                data-testid="draft-dialog"
+              >
                 <strong>{draft.kind === 'point' ? 'New point' : 'New region'}</strong>
                 <textarea
                   autoFocus
@@ -183,6 +189,7 @@ export function App(): ReactNode {
                   value={draftNote}
                   placeholder="Add a note…"
                   onChange={(e) => setDraftNote(e.target.value)}
+                  data-testid="draft-note-textarea"
                 />
                 <div className="row-actions">
                   <button
