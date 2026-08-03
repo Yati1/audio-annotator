@@ -6,11 +6,16 @@
 import { zipSync, unzipSync, strToU8, strFromU8 } from 'fflate';
 import type { Annotation, AudioMeta, FullProject, Project, Reply } from '../types';
 import { SCHEMA_VERSION } from '../types';
+import { AUTHOR_COLORS, isAuthorColor } from '../../lib/color';
+
+/** Used when an imported bundle carries a missing/invalid `authorColor` (e.g. hand-edited). */
+const FALLBACK_AUTHOR_COLOR = AUTHOR_COLORS[0];
 
 export interface ManifestReply {
   id: string;
   text: string;
   authorName: string;
+  authorColor: string;
   createdAt: string;
   updatedAt: string;
   deleted?: boolean;
@@ -23,6 +28,7 @@ export interface ManifestAnnotation {
   endSec: number | null;
   note: string;
   authorName: string;
+  authorColor: string;
   createdAt: string;
   updatedAt: string;
   deleted?: boolean;
@@ -65,6 +71,7 @@ export function buildManifest(full: FullProject): Manifest {
     endSec: a.endSec,
     note: a.note,
     authorName: a.authorName,
+    authorColor: a.authorColor,
     createdAt: a.createdAt,
     updatedAt: a.updatedAt,
     deleted: a.deleted,
@@ -72,6 +79,7 @@ export function buildManifest(full: FullProject): Manifest {
       id: r.id,
       text: r.text,
       authorName: r.authorName,
+      authorColor: r.authorColor,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
       deleted: r.deleted,
@@ -206,6 +214,7 @@ export function parseBundle(bytes: Uint8Array):
       endSec: a.endSec,
       note: a.note,
       authorName: a.authorName,
+      authorColor: isAuthorColor(a.authorColor) ? a.authorColor : FALLBACK_AUTHOR_COLOR,
       createdAt: a.createdAt,
       updatedAt: a.updatedAt,
       deleted: a.deleted,
@@ -216,6 +225,7 @@ export function parseBundle(bytes: Uint8Array):
         annotationId: a.id,
         text: r.text,
         authorName: r.authorName,
+        authorColor: isAuthorColor(r.authorColor) ? r.authorColor : FALLBACK_AUTHOR_COLOR,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
         deleted: r.deleted,

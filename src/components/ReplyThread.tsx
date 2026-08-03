@@ -34,7 +34,14 @@ export function ReplyThread({ replies, onAdd, onEdit, onDelete }: ReplyThreadPro
           {replies.map((r) => (
             <li key={r.id} className="reply" data-testid="reply-item" data-reply-id={r.id}>
               <div className="reply-head">
-                <span className="author">{r.authorName}</span>
+                <span className="author">
+                  <span
+                    className="author-color-dot"
+                    style={{ background: r.authorColor }}
+                    aria-hidden="true"
+                  />
+                  {r.authorName}
+                </span>
                 <time dateTime={r.createdAt}>{replyTime(r.createdAt)}</time>
               </div>
               {editingId === r.id ? (

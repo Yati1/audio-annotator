@@ -8,17 +8,28 @@ describe('reply service', () => {
       annotationId: 'a1',
       text: 'hello',
       authorName: 'Sam',
+      authorColor: '#3987e5',
     });
     expect(r.ok).toBe(true);
   });
 
   it('rejects empty text', () => {
-    const r = replyService.add({ annotationId: 'a1', text: '  ', authorName: 'Sam' });
+    const r = replyService.add({
+      annotationId: 'a1',
+      text: '  ',
+      authorName: 'Sam',
+      authorColor: '#3987e5',
+    });
     expect(r.ok).toBe(false);
   });
 
   it('soft-deletes without removing', () => {
-    const r = replyService.add({ annotationId: 'a1', text: 'x', authorName: 'Sam' });
+    const r = replyService.add({
+      annotationId: 'a1',
+      text: 'x',
+      authorName: 'Sam',
+      authorColor: '#3987e5',
+    });
     if (!r.ok) throw new Error('failed');
     const deleted = replyService.remove(r.value);
     expect(deleted.deleted).toBe(true);
@@ -26,8 +37,18 @@ describe('reply service', () => {
   });
 
   it('ordered excludes tombstones and sorts chronologically', () => {
-    const r1 = replyService.add({ annotationId: 'a1', text: 'first', authorName: 'A' });
-    const r2 = replyService.add({ annotationId: 'a1', text: 'second', authorName: 'B' });
+    const r1 = replyService.add({
+      annotationId: 'a1',
+      text: 'first',
+      authorName: 'A',
+      authorColor: '#3987e5',
+    });
+    const r2 = replyService.add({
+      annotationId: 'a1',
+      text: 'second',
+      authorName: 'B',
+      authorColor: '#d95926',
+    });
     if (!r1.ok || !r2.ok) throw new Error('failed');
     // r2-deleted is the tombstoned version — its id matches r2, so only r1 and r2 (non-deleted) survive.
     const r2Deleted = replyService.remove(r2.value);
@@ -44,8 +65,18 @@ describe('reply persistence', () => {
 
   it('persists and reloads replies in order', async () => {
     await storage.init();
-    const r1 = replyService.add({ annotationId: 'a1', text: 'first', authorName: 'A' });
-    const r2 = replyService.add({ annotationId: 'a1', text: 'second', authorName: 'B' });
+    const r1 = replyService.add({
+      annotationId: 'a1',
+      text: 'first',
+      authorName: 'A',
+      authorColor: '#3987e5',
+    });
+    const r2 = replyService.add({
+      annotationId: 'a1',
+      text: 'second',
+      authorName: 'B',
+      authorColor: '#d95926',
+    });
     if (!r1.ok || !r2.ok) throw new Error('failed');
     await storage.putReplies([r1.value, r2.value]);
     const loaded = await storage.listReplies('a1');

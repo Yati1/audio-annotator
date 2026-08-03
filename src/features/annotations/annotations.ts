@@ -21,6 +21,7 @@ export interface CreatePointInput {
   startSec: number;
   note: string;
   authorName: string;
+  authorColor: string;
   authorId?: string;
 }
 
@@ -81,6 +82,7 @@ export const annotationService: AnnotationService = {
       endSec: null,
       note: input.note.trim(),
       authorName: input.authorName,
+      authorColor: input.authorColor,
       authorId: input.authorId,
       createdAt: now,
       updatedAt: now,
@@ -99,6 +101,7 @@ export const annotationService: AnnotationService = {
       endSec: input.endSec,
       note: input.note.trim(),
       authorName: input.authorName,
+      authorColor: input.authorColor,
       authorId: input.authorId,
       createdAt: now,
       updatedAt: now,

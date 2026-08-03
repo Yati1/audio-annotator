@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { zipSync, strToU8 } from 'fflate';
 import { buildManifest, exportBundle, parseBundle } from '../../src/features/bundle/bundle';
 import type { FullProject } from '../../src/features/types';
 import { SCHEMA_VERSION } from '../../src/features/types';
@@ -31,6 +32,7 @@ function makeProject(): FullProject {
         endSec: 20,
         note: 'Background noise',
         authorName: 'Sam',
+        authorColor: '#3987e5',
         createdAt: now,
         updatedAt: now,
         deleted: false,
@@ -42,6 +44,7 @@ function makeProject(): FullProject {
         annotationId: 'an-1',
         text: 'Agreed',
         authorName: 'Jo',
+        authorColor: '#d95926',
         createdAt: now,
         updatedAt: now,
         deleted: false,
@@ -72,6 +75,25 @@ describe('bundle codec', () => {
     expect(restored.annotations).toHaveLength(1);
     expect(restored.replies).toHaveLength(1);
     expect(restored.replies[0].text).toBe('Agreed');
+    expect(restored.annotations[0].authorColor).toBe('#3987e5');
+    expect(restored.replies[0].authorColor).toBe('#d95926');
+  });
+
+  it('falls back to a default color when a bundle carries an invalid authorColor', async () => {
+    const full = makeProject();
+    const manifest = buildManifest(full);
+    (manifest.annotations[0] as { authorColor: string }).authorColor = 'javascript:alert(1)';
+    const zipped = { 'annotations.json': strToU8(JSON.stringify(manifest)) } as Record<
+      string,
+      Uint8Array
+    >;
+    const audioBytes = new Uint8Array([0xff, 0xfb, 0x90, 0x00]);
+    zipped[`audio/${full.audio.fileName}`] = audioBytes;
+    const bytes = zipSync(zipped);
+    const result = parseBundle(bytes);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.result.full.annotations[0].authorColor).toBe('#3987e5');
   });
 
   it('round-trip preserves tombstoned items', async () => {

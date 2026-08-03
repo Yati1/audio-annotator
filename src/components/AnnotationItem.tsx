@@ -69,7 +69,14 @@ export function AnnotationItem({
         >
           {annotation.kind === 'region' ? '▭' : '●'} {timeLabel}
         </button>
-        <span className="author">{annotation.authorName}</span>
+        <span className="author">
+          <span
+            className="author-color-dot"
+            style={{ background: annotation.authorColor }}
+            aria-hidden="true"
+          />
+          {annotation.authorName}
+        </span>
         <div className="annotation-actions">
           <button type="button" onClick={onPlay} aria-label="Play this annotation">
             ►
