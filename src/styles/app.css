@@ -147,13 +147,14 @@
 
 .annotation-item {
   border: 1px solid var(--color-border);
+  border-left-width: 4px;
   border-radius: var(--radius-2);
   padding: var(--space-3);
   background: var(--color-surface-2);
 }
 
 .annotation-item.selected {
-  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary);
 }
 
 .annotation-head {
@@ -216,6 +217,8 @@
 
 .reply {
   font-size: var(--text-sm);
+  border-left: 3px solid var(--color-border);
+  padding-left: var(--space-2);
 }
 
 .reply-head {

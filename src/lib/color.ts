@@ -40,3 +40,27 @@ export function pickAuthorColor(usedByOthers: ReadonlySet<string>, seed: string)
 export function isAuthorColor(value: unknown): value is string {
   return typeof value === 'string' && AUTHOR_COLORS.includes(value);
 }
+
+/** Converts one of the `#rrggbb` palette colors to `rgba(...)` at the given alpha. */
+export function withAlpha(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/** Falls back to the first palette color for a value that predates the field or otherwise
+ *  isn't one of the known palette values (e.g. read straight from IndexedDB, which — unlike
+ *  bundle import — doesn't validate on the way in). */
+export function safeAuthorColor(color: string): string {
+  return isAuthorColor(color) ? color : AUTHOR_COLORS[0];
+}
+
+/** A colored '●' marker for a point annotation's waveform region content, so it renders in
+ *  that annotation's author color rather than inheriting page text color. */
+export function pointMarkerContent(color: string): HTMLElement {
+  const el = document.createElement('div');
+  el.textContent = '●';
+  el.style.color = color;
+  return el;
+}

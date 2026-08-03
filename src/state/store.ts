@@ -96,6 +96,9 @@ export const useStore = create<AppState>((set, get) => ({
       return;
     }
     get().setLoadedProject(restored.full, restored.objectUrl);
+    // Resolve now (rather than waiting for the first write) so the waveform has a color
+    // to render its drag-selection preview with as soon as it mounts.
+    await ensureAuthorColor(get, set);
   },
 
   async setDisplayName(name) {
@@ -149,6 +152,7 @@ export const useStore = create<AppState>((set, get) => ({
       repliesByAnnotation: {},
       notice: file.size > LARGE_FILE_BYTES ? 'Large file — playback may be slow.' : null,
     });
+    await ensureAuthorColor(get, set);
   },
 
   clearError() {
@@ -338,6 +342,9 @@ export const useStore = create<AppState>((set, get) => ({
 
     const objectUrl = URL.createObjectURL(audioBlob);
     get().setLoadedProject(outcome.project, objectUrl);
+    // Resolve now, so a device's first-ever color pick can see collaborators' colors
+    // already present in the just-imported project and avoid an obvious clash.
+    await ensureAuthorColor(get, set);
     return {
       added: outcome.added.annotations + outcome.added.replies,
       conflicts: outcome.conflicts.length,

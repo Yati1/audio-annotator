@@ -57,6 +57,7 @@ export function AnnotationItem({
   return (
     <li
       className={`annotation-item${selected ? ' selected' : ''}`}
+      style={{ borderLeftColor: annotation.authorColor }}
       data-testid="annotation-item"
       data-annotation-id={annotation.id}
     >

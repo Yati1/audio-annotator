@@ -32,7 +32,13 @@ export function ReplyThread({ replies, onAdd, onEdit, onDelete }: ReplyThreadPro
       {replies.length > 0 && (
         <ul className="reply-list">
           {replies.map((r) => (
-            <li key={r.id} className="reply" data-testid="reply-item" data-reply-id={r.id}>
+            <li
+              key={r.id}
+              className="reply"
+              style={{ borderLeftColor: r.authorColor }}
+              data-testid="reply-item"
+              data-reply-id={r.id}
+            >
               <div className="reply-head">
                 <span className="author">
                   <span

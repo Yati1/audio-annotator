@@ -9,6 +9,7 @@ import {
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import type { Annotation } from '../features/types';
+import { isAuthorColor, pointMarkerContent, safeAuthorColor, withAlpha } from '../lib/color';
 
 export interface PendingRegion {
   startSec: number;
@@ -27,6 +28,8 @@ interface WaveformViewProps {
   url: string;
   annotations: Annotation[];
   selectedId: string | null;
+  /** This device's own author color, used to preview a not-yet-saved drag selection. */
+  authorColor: string;
   onReady(durationSec: number): void;
   onTime(sec: number): void;
   onPlayState(playing: boolean): void;
@@ -34,7 +37,8 @@ interface WaveformViewProps {
   onSelectAnnotation(id: string): void;
 }
 
-const REGION_COLOR = 'rgba(79, 140, 255, 0.25)';
+/** Used only if a drag-selection happens before this device's color has resolved. */
+const FALLBACK_DRAG_COLOR = 'rgba(79, 140, 255, 0.25)';
 
 /**
  * wavesurfer.js host. Renders the waveform and existing annotations (regions + point
@@ -102,7 +106,10 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
       ws.on('play', () => cbRef.current.onPlayState(true));
       ws.on('pause', () => cbRef.current.onPlayState(false));
 
-      regions.enableDragSelection({ color: REGION_COLOR });
+      const dragColor = isAuthorColor(cbRef.current.authorColor)
+        ? withAlpha(cbRef.current.authorColor, 0.25)
+        : FALLBACK_DRAG_COLOR;
+      regions.enableDragSelection({ color: dragColor });
       regions.on('region-created', (region) => {
         // User-drawn regions have no id yet; existing ones are prefixed below.
         if (region.id.startsWith('anno-')) return;
@@ -137,19 +144,18 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
       });
       for (const a of props.annotations) {
         if (a.deleted) continue;
-        const isSelected = a.id === props.selectedId;
+        const color = safeAuthorColor(a.authorColor);
         regions.addRegion({
           id: `anno-${a.id}`,
           start: a.startSec,
           end: a.kind === 'region' ? (a.endSec ?? a.startSec) : a.startSec,
-          color: a.kind === 'region' ? REGION_COLOR : undefined,
-          content: a.kind === 'point' ? '●' : undefined,
+          color: a.kind === 'region' ? withAlpha(color, 0.25) : color,
+          content: a.kind === 'point' ? pointMarkerContent(color) : undefined,
           drag: false,
           resize: false,
         });
-        void isSelected;
       }
-    }, [props.annotations, props.selectedId, loading]);
+    }, [props.annotations, loading]);
 
     return (
       <div className="waveform">
