@@ -35,8 +35,13 @@ do not read "surrounding code" from the working tree — it may contain unrelate
 from other stacked branches. Fetch the exact PR-branch version instead:
 
 ```
+git fetch origin <head-branch>
 git show <head-branch>:<path/to/file>
 ```
+
+`git show` needs `<head-branch>` to resolve as a ref already known to the local repo —
+on a fresh clone, a CI checkout, or a fork-based PR it usually isn't yet, so fetch it
+first (or use `origin/<head-branch>` if fetching under that name).
 
 Confirm the checkout state first (`git branch -a`, or notice whether the base branch in
 the PR metadata differs from what a naive local diff would show) before deciding which
@@ -190,13 +195,18 @@ gh api graphql -f query='
 query {
   repository(owner: "<owner>", name: "<repo>") {
     pullRequest(number: <number>) {
-      reviewThreads(first: 20) {
+      reviewThreads(first: 100) {
+        pageInfo { hasNextPage endCursor }
         nodes { id isResolved path line comments(first: 5) { nodes { databaseId body } } }
       }
     }
   }
 }'
 ```
+
+`reviewThreads` is a paginated connection — on a PR with more than 100 threads, check
+`pageInfo.hasNextPage` and page through with `after: "<endCursor>"` so no thread is
+missed when matching `databaseId`s.
 
 Match each `databaseId` back to the comment you replied to, then:
 
