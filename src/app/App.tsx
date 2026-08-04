@@ -6,6 +6,7 @@ import { TransportBar } from '../components/TransportBar';
 import { AnnotationList } from '../components/AnnotationList';
 import { ImportExportControls } from '../components/ImportExportControls';
 import { DisplayNamePrompt } from '../components/DisplayNamePrompt';
+import { DisplayNameControl } from '../components/DisplayNameControl';
 import { ErrorState, Loading, Toast } from '../components/states/States';
 import type { Annotation } from '../features/types';
 
@@ -127,6 +128,7 @@ export function App(): ReactNode {
             />
           </label>
           <ImportExportControls />
+          <DisplayNameControl />
         </div>
       </header>
 

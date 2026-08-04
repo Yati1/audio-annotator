@@ -55,6 +55,8 @@ export interface Annotation {
   endSec: number | null;
   note: string;
   authorName: string;
+  /** Local device identity of the author (not part of the export bundle format). */
+  authorId?: string;
   createdAt: string;
   updatedAt: string;
   deleted?: boolean;
@@ -65,6 +67,8 @@ export interface Reply {
   annotationId: string;
   text: string;
   authorName: string;
+  /** Local device identity of the author (not part of the export bundle format). */
+  authorId?: string;
   createdAt: string;
   updatedAt: string;
   deleted?: boolean;

@@ -49,4 +49,20 @@ test.describe('accessibility (keyboard-only)', () => {
 
     await expect(app.annotations.itemByNote('Region via keyboard').locator()).toBeVisible();
   });
+
+  test('changes the display name via keyboard only', async ({ app }) => {
+    await app.ensureSession('Kay');
+    await app.openAudioFixture(makeWavFile({ durationSec: 4 }));
+
+    await tabUntilFocused(app.page, app.page.getByRole('button', { name: 'Change name' }));
+    await app.page.keyboard.press('Enter');
+
+    // #edn-input is autoFocus'd on mount; select-all before typing to replace the prefilled value.
+    await app.page.locator('#edn-input').waitFor();
+    await app.page.keyboard.press('ControlOrMeta+a');
+    await app.page.keyboard.type('Kay Summers');
+    await app.page.keyboard.press('Enter');
+
+    await expect(app.displayNameControl.label()).toContainText('Kay Summers');
+  });
 });
