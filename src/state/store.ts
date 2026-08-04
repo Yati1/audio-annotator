@@ -382,22 +382,29 @@ async function renameAuthoredContent(
   const updatedAnnotations = withRenamedAuthor(get().annotations, authorId, newName, now);
   if (updatedAnnotations.length > 0) {
     await storage.putAnnotations(updatedAnnotations);
-    // Re-read state after the await: another action may have run concurrently while this
-    // write was in flight, and the merge must build on the latest state, not a stale snapshot.
-    const byId = new Map(updatedAnnotations.map((a) => [a.id, a]));
+    // Re-read state after the await and splice in only the renamed fields (rather than
+    // substituting the whole pre-await snapshot), so a concurrent edit to another field on
+    // the same record during the write isn't reverted.
+    const renamedIds = new Set(updatedAnnotations.map((a) => a.id));
     const fresh = get().annotations;
-    set({ annotations: fresh.map((a) => byId.get(a.id) ?? a).filter((a) => !a.deleted) });
+    set({
+      annotations: fresh
+        .map((a) => (renamedIds.has(a.id) ? { ...a, authorName: newName, updatedAt: now } : a))
+        .filter((a) => !a.deleted),
+    });
   }
 
   const allReplies = Object.values(get().repliesByAnnotation).flat();
   const updatedReplies = withRenamedAuthor(allReplies, authorId, newName, now);
   if (updatedReplies.length > 0) {
     await storage.putReplies(updatedReplies);
-    const byId = new Map(updatedReplies.map((r) => [r.id, r]));
+    const renamedReplyIds = new Set(updatedReplies.map((r) => r.id));
     const fresh = get().repliesByAnnotation;
     const next: Record<string, Reply[]> = {};
     for (const [annotationId, list] of Object.entries(fresh)) {
-      next[annotationId] = list.map((r) => byId.get(r.id) ?? r);
+      next[annotationId] = list.map((r) =>
+        renamedReplyIds.has(r.id) ? { ...r, authorName: newName, updatedAt: now } : r,
+      );
     }
     set({ repliesByAnnotation: next });
   }
