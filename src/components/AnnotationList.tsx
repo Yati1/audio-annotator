@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import type { Annotation, Reply } from '../features/types';
 import { AnnotationItem } from './AnnotationItem';
 import { Empty } from './states/States';
@@ -28,6 +28,15 @@ export function AnnotationList({
   onEditReply,
   onDeleteReply,
 }: AnnotationListProps): ReactNode {
+  const listRef = useRef<HTMLUListElement>(null);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    listRef.current
+      ?.querySelector<HTMLElement>(`[data-annotation-id="${selectedId}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [selectedId]);
+
   const visible = annotations.filter((a) => !a.deleted).sort((a, b) => a.startSec - b.startSec);
 
   if (visible.length === 0) {
@@ -35,7 +44,12 @@ export function AnnotationList({
   }
 
   return (
-    <ul className="annotation-list" aria-label="Annotations" data-testid="annotation-list">
+    <ul
+      ref={listRef}
+      className="annotation-list"
+      aria-label="Annotations"
+      data-testid="annotation-list"
+    >
       {visible.map((a) => (
         <AnnotationItem
           key={a.id}
