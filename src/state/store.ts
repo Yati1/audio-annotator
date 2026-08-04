@@ -13,6 +13,7 @@ import { merge } from '../features/bundle/merge';
 import { isErr } from '../lib/result';
 import { newId } from '../lib/id';
 import { nowIso } from '../lib/time';
+import { pickAuthorColor } from '../lib/color';
 import type { Annotation, AudioMeta, FullProject, Project, Reply } from '../features/types';
 import { SCHEMA_VERSION } from '../features/types';
 
@@ -25,6 +26,8 @@ export interface AppState {
 
   displayName: string;
   authorId: string;
+  /** This device's assigned color; empty until first authored (see `ensureAuthorColor`). */
+  authorColor: string;
 
   project: Project | null;
   audio: AudioMeta | null;
@@ -68,6 +71,7 @@ export const useStore = create<AppState>((set, get) => ({
   notice: null,
   displayName: '',
   authorId: '',
+  authorColor: '',
   project: null,
   audio: null,
   objectUrl: null,
@@ -83,7 +87,8 @@ export const useStore = create<AppState>((set, get) => ({
       authorId = newId();
       await storage.setSession('authorId', authorId);
     }
-    set({ displayName: name, authorId });
+    const authorColor = (await storage.getSession<string>('authorColor')) ?? '';
+    set({ displayName: name, authorId, authorColor });
 
     const restored = await restoreLatestProject();
     if (!restored) {
@@ -91,6 +96,9 @@ export const useStore = create<AppState>((set, get) => ({
       return;
     }
     get().setLoadedProject(restored.full, restored.objectUrl);
+    // Resolve now (rather than waiting for the first write) so the waveform has a color
+    // to render its drag-selection preview with as soon as it mounts.
+    await ensureAuthorColor(get, set);
   },
 
   async setDisplayName(name) {
@@ -144,6 +152,7 @@ export const useStore = create<AppState>((set, get) => ({
       repliesByAnnotation: {},
       notice: file.size > LARGE_FILE_BYTES ? 'Large file — playback may be slow.' : null,
     });
+    await ensureAuthorColor(get, set);
   },
 
   clearError() {
@@ -155,10 +164,21 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   async addPoint(startSec, note) {
+    // ensureAuthorColor awaits an IndexedDB write on first use; re-read state afterward
+    // rather than snapshotting before it, so a concurrent rename/project-switch during
+    // that window isn't stamped onto this annotation with stale values.
+    const authorColor = await ensureAuthorColor(get, set);
     const { project, audio, displayName, authorId } = get();
     if (!project || !audio) return null;
     const res = annotationService.createPoint(
-      { projectId: project.id, startSec, note, authorName: displayName || 'Anonymous', authorId },
+      {
+        projectId: project.id,
+        startSec,
+        note,
+        authorName: displayName || 'Anonymous',
+        authorColor,
+        authorId,
+      },
       audio.durationSec,
     );
     if (isErr(res)) {
@@ -170,6 +190,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   async addRegion(startSec, endSec, note) {
+    const authorColor = await ensureAuthorColor(get, set);
     const { project, audio, displayName, authorId } = get();
     if (!project || !audio) return null;
     const res = annotationService.createRegion(
@@ -179,6 +200,7 @@ export const useStore = create<AppState>((set, get) => ({
         endSec,
         note,
         authorName: displayName || 'Anonymous',
+        authorColor,
         authorId,
       },
       audio.durationSec,
@@ -212,11 +234,13 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   async addReply(annotationId, text) {
+    const authorColor = await ensureAuthorColor(get, set);
     const { displayName, authorId } = get();
     const res = replyService.add({
       annotationId,
       text,
       authorName: displayName || 'Anonymous',
+      authorColor,
       authorId,
     });
     if (isErr(res)) {
@@ -318,6 +342,9 @@ export const useStore = create<AppState>((set, get) => ({
 
     const objectUrl = URL.createObjectURL(audioBlob);
     get().setLoadedProject(outcome.project, objectUrl);
+    // Resolve now, so a device's first-ever color pick can see collaborators' colors
+    // already present in the just-imported project and avoid an obvious clash.
+    await ensureAuthorColor(get, set);
     return {
       added: outcome.added.annotations + outcome.added.replies,
       conflicts: outcome.conflicts.length,
@@ -352,6 +379,34 @@ async function persistReply(
     : [...list, reply];
   set({ repliesByAnnotation: map });
   await touchProject(get, set);
+}
+
+/**
+ * Returns this device's author color, assigning one on first use. Deferred until the first
+ * authored write (rather than at `init()`) so that if the user imports a shared project
+ * before adding their own content, the assignment can see which colors collaborators
+ * already have and avoid them.
+ */
+async function ensureAuthorColor(
+  get: () => AppState,
+  set: (partial: Partial<AppState>) => void,
+): Promise<string> {
+  const existing = get().authorColor;
+  if (existing) return existing;
+
+  const { authorId, annotations, repliesByAnnotation } = get();
+  const usedByOthers = new Set<string>();
+  for (const a of annotations) {
+    if (a.authorId !== authorId) usedByOthers.add(a.authorColor);
+  }
+  for (const r of Object.values(repliesByAnnotation).flat()) {
+    if (r.authorId !== authorId) usedByOthers.add(r.authorColor);
+  }
+
+  const color = pickAuthorColor(usedByOthers, authorId);
+  set({ authorColor: color });
+  await storage.setSession('authorColor', color);
+  return color;
 }
 
 /** Authored records whose `authorId` matches, with `authorName`/`updatedAt` stamped anew. */

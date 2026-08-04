@@ -42,11 +42,25 @@ describe('store: renaming the display name', () => {
 
   it('rewrites authorName on my past annotations and replies in the current project', async () => {
     const mine = annotationService.createPoint(
-      { projectId, startSec: 1, note: 'mine', authorName: 'Sam', authorId: myAuthorId },
+      {
+        projectId,
+        startSec: 1,
+        note: 'mine',
+        authorName: 'Sam',
+        authorColor: '#3987e5',
+        authorId: myAuthorId,
+      },
       120,
     );
     const theirs = annotationService.createPoint(
-      { projectId, startSec: 2, note: 'theirs', authorName: 'Alex', authorId: otherAuthorId },
+      {
+        projectId,
+        startSec: 2,
+        note: 'theirs',
+        authorName: 'Alex',
+        authorColor: '#d95926',
+        authorId: otherAuthorId,
+      },
       120,
     );
     if (!mine.ok || !theirs.ok) throw new Error('setup failed');
@@ -56,6 +70,7 @@ describe('store: renaming the display name', () => {
       annotationId: mine.value.id,
       text: 'my reply',
       authorName: 'Sam',
+      authorColor: '#3987e5',
       authorId: myAuthorId,
     });
     if (!myReply.ok) throw new Error('setup failed');
@@ -75,6 +90,8 @@ describe('store: renaming the display name', () => {
     expect(state.annotations.find((a) => a.id === theirs.value.id)?.authorName).toBe('Alex');
     expect(state.repliesByAnnotation[mine.value.id][0].authorName).toBe('Samuel');
     expect(state.project?.updatedAt).not.toBe(updatedAtBefore);
+    // Color is tied to authorId, not the display name — a rename must not repaint it.
+    expect(state.annotations.find((a) => a.id === mine.value.id)?.authorColor).toBe('#3987e5');
 
     const persisted = await storage.listAnnotations(projectId);
     expect(persisted.find((a) => a.id === mine.value.id)?.authorName).toBe('Samuel');
@@ -86,7 +103,14 @@ describe('store: renaming the display name', () => {
   it('relabels my content on the very first name set (starting from a blank name)', async () => {
     useStore.setState({ displayName: '' });
     const anonymous = annotationService.createPoint(
-      { projectId, startSec: 1, note: 'anon', authorName: 'Anonymous', authorId: myAuthorId },
+      {
+        projectId,
+        startSec: 1,
+        note: 'anon',
+        authorName: 'Anonymous',
+        authorColor: '#3987e5',
+        authorId: myAuthorId,
+      },
       120,
     );
     if (!anonymous.ok) throw new Error('setup failed');
@@ -102,7 +126,7 @@ describe('store: renaming the display name', () => {
 
   it('does not rewrite content authored before authorId existed (no authorId set)', async () => {
     const legacy = annotationService.createPoint(
-      { projectId, startSec: 1, note: 'legacy', authorName: 'Sam' },
+      { projectId, startSec: 1, note: 'legacy', authorName: 'Sam', authorColor: '#3987e5' },
       120,
     );
     if (!legacy.ok) throw new Error('setup failed');
@@ -116,7 +140,14 @@ describe('store: renaming the display name', () => {
 
   it('does nothing when the name is unchanged or blank', async () => {
     const mine = annotationService.createPoint(
-      { projectId, startSec: 1, note: 'mine', authorName: 'Sam', authorId: myAuthorId },
+      {
+        projectId,
+        startSec: 1,
+        note: 'mine',
+        authorName: 'Sam',
+        authorColor: '#3987e5',
+        authorId: myAuthorId,
+      },
       120,
     );
     if (!mine.ok) throw new Error('setup failed');

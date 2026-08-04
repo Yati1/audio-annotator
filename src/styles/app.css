@@ -147,13 +147,14 @@
 
 .annotation-item {
   border: 1px solid var(--color-border);
+  border-left-width: 4px;
   border-radius: var(--radius-2);
   padding: var(--space-3);
   background: var(--color-surface-2);
 }
 
 .annotation-item.selected {
-  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary);
 }
 
 .annotation-head {
@@ -168,8 +169,18 @@
 }
 
 .author {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
+}
+
+.author-color-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .annotation-actions {
@@ -206,6 +217,8 @@
 
 .reply {
   font-size: var(--text-sm);
+  border-left: 3px solid var(--color-border);
+  padding-left: var(--space-2);
 }
 
 .reply-head {

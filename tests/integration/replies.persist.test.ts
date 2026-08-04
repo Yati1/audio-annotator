@@ -32,8 +32,18 @@ describe('reply storage persistence', () => {
     await storage.putProject(project);
     await storage.putAudio(audio);
 
-    const r1 = replyService.add({ annotationId: 'an-1', text: 'first', authorName: 'A' });
-    const r2 = replyService.add({ annotationId: 'an-1', text: 'second', authorName: 'B' });
+    const r1 = replyService.add({
+      annotationId: 'an-1',
+      text: 'first',
+      authorName: 'A',
+      authorColor: '#3987e5',
+    });
+    const r2 = replyService.add({
+      annotationId: 'an-1',
+      text: 'second',
+      authorName: 'B',
+      authorColor: '#d95926',
+    });
     if (!r1.ok || !r2.ok) throw new Error('failed');
     await storage.putReplies([r1.value, r2.value]);
 
@@ -46,7 +56,12 @@ describe('reply storage persistence', () => {
 
   it('edit persists updated text', async () => {
     await storage.init();
-    const r = replyService.add({ annotationId: 'an-1', text: 'original', authorName: 'A' });
+    const r = replyService.add({
+      annotationId: 'an-1',
+      text: 'original',
+      authorName: 'A',
+      authorColor: '#3987e5',
+    });
     if (!r.ok) throw new Error('failed');
     await storage.putReplies([r.value]);
 

@@ -38,7 +38,7 @@ describe('annotation persistence', () => {
     await storage.init();
     await makeProject();
     const res = annotationService.createPoint(
-      { projectId, startSec: 10, note: 'hello', authorName: 'Sam' },
+      { projectId, startSec: 10, note: 'hello', authorName: 'Sam', authorColor: '#3987e5' },
       120,
     );
     expect(res.ok).toBe(true);
@@ -54,7 +54,14 @@ describe('annotation persistence', () => {
     await storage.init();
     await makeProject();
     const res = annotationService.createRegion(
-      { projectId, startSec: 5, endSec: 15, note: 'region', authorName: 'Sam' },
+      {
+        projectId,
+        startSec: 5,
+        endSec: 15,
+        note: 'region',
+        authorName: 'Sam',
+        authorColor: '#3987e5',
+      },
       120,
     );
     expect(res.ok).toBe(true);
@@ -70,11 +77,11 @@ describe('annotation persistence', () => {
     await storage.init();
     await makeProject();
     const r1 = annotationService.createPoint(
-      { projectId, startSec: 20, note: 'b', authorName: 'A' },
+      { projectId, startSec: 20, note: 'b', authorName: 'A', authorColor: '#3987e5' },
       120,
     );
     const r2 = annotationService.createPoint(
-      { projectId, startSec: 5, note: 'a', authorName: 'A' },
+      { projectId, startSec: 5, note: 'a', authorName: 'A', authorColor: '#3987e5' },
       120,
     );
     if (!r1.ok || !r2.ok) return;

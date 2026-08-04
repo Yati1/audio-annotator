@@ -9,6 +9,7 @@ import {
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import type { Annotation } from '../features/types';
+import { isAuthorColor, pointMarkerContent, safeAuthorColor, withAlpha } from '../lib/color';
 
 export interface PendingRegion {
   startSec: number;
@@ -27,6 +28,8 @@ interface WaveformViewProps {
   url: string;
   annotations: Annotation[];
   selectedId: string | null;
+  /** This device's own author color, used to preview a not-yet-saved drag selection. */
+  authorColor: string;
   onReady(durationSec: number): void;
   onTime(sec: number): void;
   onPlayState(playing: boolean): void;
@@ -34,7 +37,8 @@ interface WaveformViewProps {
   onSelectAnnotation(id: string): void;
 }
 
-const REGION_COLOR = 'rgba(79, 140, 255, 0.25)';
+/** Used only if a drag-selection happens before this device's color has resolved. */
+const FALLBACK_DRAG_COLOR = 'rgba(79, 140, 255, 0.25)';
 
 /**
  * wavesurfer.js host. Renders the waveform and existing annotations (regions + point
@@ -45,6 +49,11 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
     const containerRef = useRef<HTMLDivElement>(null);
     const wsRef = useRef<WaveSurfer | null>(null);
     const regionsRef = useRef<ReturnType<typeof RegionsPlugin.create> | null>(null);
+    const disableDragSelectionRef = useRef<(() => void) | null>(null);
+    // Set when drag-selection is first enabled with the fallback color (this device's
+    // authorColor hadn't resolved yet); tells the color-sync effect below there's
+    // something to fix once it does.
+    const needsDragColorSyncRef = useRef(false);
     const [loading, setLoading] = useState(true);
 
     // Keep latest callbacks without re-initializing wavesurfer.
@@ -102,7 +111,12 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
       ws.on('play', () => cbRef.current.onPlayState(true));
       ws.on('pause', () => cbRef.current.onPlayState(false));
 
-      regions.enableDragSelection({ color: REGION_COLOR });
+      const authorColorResolved = isAuthorColor(cbRef.current.authorColor);
+      const dragColor = authorColorResolved
+        ? withAlpha(cbRef.current.authorColor, 0.25)
+        : FALLBACK_DRAG_COLOR;
+      needsDragColorSyncRef.current = !authorColorResolved;
+      disableDragSelectionRef.current = regions.enableDragSelection({ color: dragColor });
       regions.on('region-created', (region) => {
         // User-drawn regions have no id yet; existing ones are prefixed below.
         if (region.id.startsWith('anno-')) return;
@@ -123,10 +137,26 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
         ws.destroy();
         wsRef.current = null;
         regionsRef.current = null;
+        disableDragSelectionRef.current = null;
       };
       // Re-create only when the audio source changes.
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [props.url]);
+
+    // If this device's authorColor was still unresolved when drag-selection was first
+    // enabled above (e.g. its very first-ever authored write), re-register it with the
+    // real color once available — otherwise the live drag preview stays on the generic
+    // fallback for the rest of the session even after authorColor is assigned.
+    useEffect(() => {
+      if (!needsDragColorSyncRef.current || loading) return;
+      const regions = regionsRef.current;
+      if (!regions || !isAuthorColor(props.authorColor)) return;
+      disableDragSelectionRef.current?.();
+      disableDragSelectionRef.current = regions.enableDragSelection({
+        color: withAlpha(props.authorColor, 0.25),
+      });
+      needsDragColorSyncRef.current = false;
+    }, [props.authorColor, loading]);
 
     // Render existing annotations as regions/markers whenever they change.
     useEffect(() => {
@@ -137,19 +167,18 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
       });
       for (const a of props.annotations) {
         if (a.deleted) continue;
-        const isSelected = a.id === props.selectedId;
+        const color = safeAuthorColor(a.authorColor);
         regions.addRegion({
           id: `anno-${a.id}`,
           start: a.startSec,
           end: a.kind === 'region' ? (a.endSec ?? a.startSec) : a.startSec,
-          color: a.kind === 'region' ? REGION_COLOR : undefined,
-          content: a.kind === 'point' ? '●' : undefined,
+          color: a.kind === 'region' ? withAlpha(color, 0.25) : color,
+          content: a.kind === 'point' ? pointMarkerContent(color) : undefined,
           drag: false,
           resize: false,
         });
-        void isSelected;
       }
-    }, [props.annotations, props.selectedId, loading]);
+    }, [props.annotations, loading]);
 
     return (
       <div className="waveform">

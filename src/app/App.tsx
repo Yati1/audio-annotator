@@ -21,6 +21,7 @@ export function App(): ReactNode {
   const objectUrl = useStore((s) => s.objectUrl);
   const annotations = useStore((s) => s.annotations);
   const repliesByAnnotation = useStore((s) => s.repliesByAnnotation);
+  const authorColor = useStore((s) => s.authorColor);
 
   const init = useStore((s) => s.init);
   const loadAudioFile = useStore((s) => s.loadAudioFile);
@@ -151,6 +152,7 @@ export function App(): ReactNode {
               url={objectUrl}
               annotations={annotations}
               selectedId={selectedId}
+              authorColor={authorColor}
               onReady={setDuration}
               onTime={setCurrentSec}
               onPlayState={setPlaying}

@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import type { Annotation, Reply } from '../features/types';
+import { safeAuthorColor } from '../lib/color';
 import { formatTime } from '../lib/time';
 import { ReplyThread } from './ReplyThread';
 
@@ -32,6 +33,7 @@ export function AnnotationItem({
   const [draft, setDraft] = useState(annotation.note);
 
   const activeReplies = replies.filter((r) => !r.deleted);
+  const authorColor = safeAuthorColor(annotation.authorColor);
   const timeLabel =
     annotation.kind === 'region'
       ? `${formatTime(annotation.startSec)}–${formatTime(annotation.endSec ?? annotation.startSec)}`
@@ -57,6 +59,7 @@ export function AnnotationItem({
   return (
     <li
       className={`annotation-item${selected ? ' selected' : ''}`}
+      style={{ borderLeftColor: authorColor }}
       data-testid="annotation-item"
       data-annotation-id={annotation.id}
     >
@@ -69,7 +72,14 @@ export function AnnotationItem({
         >
           {annotation.kind === 'region' ? '▭' : '●'} {timeLabel}
         </button>
-        <span className="author">{annotation.authorName}</span>
+        <span className="author">
+          <span
+            className="author-color-dot"
+            style={{ background: authorColor }}
+            aria-hidden="true"
+          />
+          {annotation.authorName}
+        </span>
         <div className="annotation-actions">
           <button type="button" onClick={onPlay} aria-label="Play this annotation">
             ►
