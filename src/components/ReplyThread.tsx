@@ -35,71 +35,71 @@ export function ReplyThread({ replies, onAdd, onEdit, onDelete }: ReplyThreadPro
           {replies.map((r) => {
             const authorColor = safeAuthorColor(r.authorColor);
             return (
-            <li
-              key={r.id}
-              className="reply"
-              style={{ borderLeftColor: authorColor }}
-              data-testid="reply-item"
-              data-reply-id={r.id}
-            >
-              <div className="reply-head">
-                <span className="author">
-                  <span
-                    className="author-color-dot"
-                    style={{ background: authorColor }}
-                    aria-hidden="true"
-                  />
-                  {r.authorName}
-                </span>
-                <time dateTime={r.createdAt}>{replyTime(r.createdAt)}</time>
-              </div>
-              {editingId === r.id ? (
-                <div className="reply-edit">
-                  <input value={editDraft} onChange={(e) => setEditDraft(e.target.value)} />
-                  <button
-                    type="button"
-                    className="primary"
-                    onClick={() => {
-                      if (editDraft.trim()) {
-                        onEdit(r.id, editDraft);
-                        setEditingId(null);
-                      }
-                    }}
-                  >
-                    Save
-                  </button>
-                  <button type="button" onClick={() => setEditingId(null)}>
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <div className="reply-body">
-                  <span>{r.text}</span>
-                  <span className="reply-actions">
-                    <button
-                      type="button"
-                      aria-label="Edit reply"
-                      onClick={() => {
-                        setEditingId(r.id);
-                        setEditDraft(r.text);
-                      }}
-                    >
-                      ✎
-                    </button>
-                    <button
-                      type="button"
-                      className="danger"
-                      aria-label="Delete reply"
-                      onClick={() => {
-                        if (window.confirm('Delete this reply?')) onDelete(r.id);
-                      }}
-                    >
-                      🗑
-                    </button>
+              <li
+                key={r.id}
+                className="reply"
+                style={{ borderLeftColor: authorColor }}
+                data-testid="reply-item"
+                data-reply-id={r.id}
+              >
+                <div className="reply-head">
+                  <span className="author">
+                    <span
+                      className="author-color-dot"
+                      style={{ background: authorColor }}
+                      aria-hidden="true"
+                    />
+                    {r.authorName}
                   </span>
+                  <time dateTime={r.createdAt}>{replyTime(r.createdAt)}</time>
                 </div>
-              )}
-            </li>
+                {editingId === r.id ? (
+                  <div className="reply-edit">
+                    <input value={editDraft} onChange={(e) => setEditDraft(e.target.value)} />
+                    <button
+                      type="button"
+                      className="primary"
+                      onClick={() => {
+                        if (editDraft.trim()) {
+                          onEdit(r.id, editDraft);
+                          setEditingId(null);
+                        }
+                      }}
+                    >
+                      Save
+                    </button>
+                    <button type="button" onClick={() => setEditingId(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="reply-body">
+                    <span>{r.text}</span>
+                    <span className="reply-actions">
+                      <button
+                        type="button"
+                        aria-label="Edit reply"
+                        onClick={() => {
+                          setEditingId(r.id);
+                          setEditDraft(r.text);
+                        }}
+                      >
+                        ✎
+                      </button>
+                      <button
+                        type="button"
+                        className="danger"
+                        aria-label="Delete reply"
+                        onClick={() => {
+                          if (window.confirm('Delete this reply?')) onDelete(r.id);
+                        }}
+                      >
+                        🗑
+                      </button>
+                    </span>
+                  </div>
+                )}
+              </li>
             );
           })}
         </ul>
