@@ -32,9 +32,14 @@ export function AnnotationList({
 
   useEffect(() => {
     if (!selectedId) return;
+    // selectedId can originate from an imported bundle's annotation id, which isn't
+    // validated for CSS-selector-safe characters — escape it so a hostile id (e.g.
+    // containing `"`) can't throw a SyntaxError here and crash the whole app (no error
+    // boundary exists to catch it).
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     listRef.current
-      ?.querySelector<HTMLElement>(`[data-annotation-id="${selectedId}"]`)
-      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      ?.querySelector<HTMLElement>(`[data-annotation-id="${CSS.escape(selectedId)}"]`)
+      ?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
   }, [selectedId]);
 
   const visible = annotations.filter((a) => !a.deleted).sort((a, b) => a.startSec - b.startSec);

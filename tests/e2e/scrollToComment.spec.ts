@@ -45,7 +45,6 @@ test.describe('scroll to selected comment', () => {
         endSec: i === pointIndex ? null : i * 2 + 1,
         note: `Comment ${i}`,
         authorName: 'Ben',
-        authorColor: '#d95926',
         createdAt: now,
         updatedAt: now,
       })),
@@ -108,7 +107,6 @@ test.describe('scroll to selected comment', () => {
         endSec: i === pointIndex ? null : i * 2 + 1,
         note: `Comment ${i}`,
         authorName: 'Ben',
-        authorColor: '#d95926',
         createdAt: now,
         updatedAt: now,
       })),
@@ -133,5 +131,70 @@ test.describe('scroll to selected comment', () => {
     await app.waveform.clickRegion(pointId);
 
     await expect(pointItem).toBeInViewport();
+  });
+
+  test('selecting an annotation whose id contains CSS-selector-breaking characters does not crash the panel', async ({
+    app,
+  }) => {
+    await app.ensureSession('Ava');
+
+    const projectId = newId();
+    const audioId = newId();
+    const now = new Date().toISOString();
+    const durationSec = 10;
+    const audioBytes = makeWavFile({ durationSec }).buffer;
+    // An imported bundle's annotation id is never format-validated, so a hand-crafted
+    // bundle can carry one like this — it must not break the scroll-into-view selector.
+    const trickyId = 'tricky"id]with-selector-chars';
+
+    const project = makeFullProject({
+      project: {
+        id: projectId,
+        title: 'Fixture project',
+        audioId,
+        schemaVersion: SCHEMA_VERSION,
+        createdAt: now,
+        updatedAt: now,
+      },
+      audio: {
+        id: audioId,
+        fileName: 'clip-a.wav',
+        mimeType: 'audio/wav',
+        durationSec,
+        byteSize: audioBytes.length,
+      },
+      annotations: [
+        {
+          id: trickyId,
+          projectId,
+          kind: 'point',
+          startSec: 2,
+          endSec: null,
+          note: 'Tricky comment',
+          authorName: 'Ben',
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+      replies: [],
+    });
+    const bundle = await buildValidBundle(project, audioBytes);
+    await app.importExport.importBundle({
+      name: 'tricky.aannz',
+      mimeType: 'application/zip',
+      buffer: bundle,
+    });
+    await app.waveform.waitUntilReady();
+
+    const pageErrors: string[] = [];
+    app.page.on('pageerror', (err) => pageErrors.push(err.message));
+
+    // clickRegion() builds its own selector from the raw id, so click by the "marker"
+    // token wavesurfer always sets on point annotations instead of routing the tricky id
+    // through that same interpolation.
+    await app.waveform.canvas().locator('[part~="marker"]').first().click();
+
+    await expect(app.annotations.itemByNote('Tricky comment').locator()).toBeInViewport();
+    expect(pageErrors).toEqual([]);
   });
 });
