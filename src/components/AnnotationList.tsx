@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import type { Annotation, Reply } from '../features/types';
 import { AnnotationItem } from './AnnotationItem';
 import { Empty } from './states/States';
@@ -28,6 +28,20 @@ export function AnnotationList({
   onEditReply,
   onDeleteReply,
 }: AnnotationListProps): ReactNode {
+  const listRef = useRef<HTMLUListElement>(null);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    // selectedId can originate from an imported bundle's annotation id, which isn't
+    // validated for CSS-selector-safe characters — escape it so a hostile id (e.g.
+    // containing `"`) can't throw a SyntaxError here and crash the whole app (no error
+    // boundary exists to catch it).
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    listRef.current
+      ?.querySelector<HTMLElement>(`[data-annotation-id="${CSS.escape(selectedId)}"]`)
+      ?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
+  }, [selectedId]);
+
   const visible = annotations.filter((a) => !a.deleted).sort((a, b) => a.startSec - b.startSec);
 
   if (visible.length === 0) {
@@ -35,7 +49,12 @@ export function AnnotationList({
   }
 
   return (
-    <ul className="annotation-list" aria-label="Annotations" data-testid="annotation-list">
+    <ul
+      ref={listRef}
+      className="annotation-list"
+      aria-label="Annotations"
+      data-testid="annotation-list"
+    >
       {visible.map((a) => (
         <AnnotationItem
           key={a.id}

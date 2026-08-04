@@ -22,6 +22,11 @@ export class WaveformPanel {
     await this.page.mouse.click(x, box.y + box.height / 2);
   }
 
+  /** Clicks the region/marker belonging to the given annotation id, selecting it. */
+  async clickRegion(id: string): Promise<void> {
+    await this.canvas().locator(`[part~="anno-${id}"]`).click();
+  }
+
   /** Drags to create a region between two fractional positions along the canvas width. */
   async dragSelectRegion(startFraction: number, endFraction: number): Promise<void> {
     const box = await this.canvas().boundingBox();
