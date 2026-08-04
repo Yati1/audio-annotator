@@ -69,7 +69,7 @@ describe('safeAuthorColor', () => {
   });
 
   it('falls back to the first palette color for an undefined/legacy value', () => {
-    expect(safeAuthorColor(undefined as unknown as string)).toBe(AUTHOR_COLORS[0]);
+    expect(safeAuthorColor(undefined)).toBe(AUTHOR_COLORS[0]);
   });
 });
 

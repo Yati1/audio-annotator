@@ -52,7 +52,7 @@ export function withAlpha(hex: string, alpha: number): string {
 /** Falls back to the first palette color for a value that predates the field or otherwise
  *  isn't one of the known palette values (e.g. read straight from IndexedDB, which — unlike
  *  bundle import — doesn't validate on the way in). */
-export function safeAuthorColor(color: string): string {
+export function safeAuthorColor(color: unknown): string {
   return isAuthorColor(color) ? color : AUTHOR_COLORS[0];
 }
 

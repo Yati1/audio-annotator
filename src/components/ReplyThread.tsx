@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import type { Reply } from '../features/types';
+import { safeAuthorColor } from '../lib/color';
 
 interface ReplyThreadProps {
   replies: Reply[];
@@ -31,11 +32,13 @@ export function ReplyThread({ replies, onAdd, onEdit, onDelete }: ReplyThreadPro
     <div className="reply-thread">
       {replies.length > 0 && (
         <ul className="reply-list">
-          {replies.map((r) => (
+          {replies.map((r) => {
+            const authorColor = safeAuthorColor(r.authorColor);
+            return (
             <li
               key={r.id}
               className="reply"
-              style={{ borderLeftColor: r.authorColor }}
+              style={{ borderLeftColor: authorColor }}
               data-testid="reply-item"
               data-reply-id={r.id}
             >
@@ -43,7 +46,7 @@ export function ReplyThread({ replies, onAdd, onEdit, onDelete }: ReplyThreadPro
                 <span className="author">
                   <span
                     className="author-color-dot"
-                    style={{ background: r.authorColor }}
+                    style={{ background: authorColor }}
                     aria-hidden="true"
                   />
                   {r.authorName}
@@ -97,7 +100,8 @@ export function ReplyThread({ replies, onAdd, onEdit, onDelete }: ReplyThreadPro
                 </div>
               )}
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
       <form className="reply-form" onSubmit={submit}>
