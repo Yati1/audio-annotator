@@ -76,6 +76,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  min-width: 0;
 }
 
 .waveform {
@@ -85,12 +86,22 @@
   padding: var(--space-3);
   position: relative;
   min-height: 120px;
+  min-width: 0;
+}
+
+.waveform-canvas {
+  min-width: 0;
+  touch-action: none;
 }
 
 .waveform-loading {
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   padding: var(--space-3) 0;
+}
+
+.waveform-canvas.panning {
+  cursor: grabbing;
 }
 
 .transport {
