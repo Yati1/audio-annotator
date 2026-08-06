@@ -138,7 +138,7 @@ src/
 │   ├── replies/   Threaded reply operations
 │   ├── bundle/    Export zip, import & validate, merge-by-ID
 │   └── storage/   IndexedDB StoragePort
-├── lib/           id (UUID), time, result (typed errors)
+├── lib/           id (UUID), time, result (typed errors), color (author color assignment)
 ├── state/         zustand store wiring features to UI
 └── styles/        Design tokens (tokens.css), global reset, layout (app.css)
 
