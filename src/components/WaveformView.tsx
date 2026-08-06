@@ -333,6 +333,11 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
     // Keep a persistent region showing the in-progress draft's bounds for as long as
     // its comment is being composed — replaces the old behavior of removing the
     // drag-created region the instant the drag ended (see `region-created` above).
+    // Depends on the primitive bounds, not `props.draftRegion` itself: App passes a new
+    // object literal on every render, which would otherwise remove/re-add this region on
+    // every keystroke in the draft note textarea.
+    const draftStartSec = props.draftRegion?.startSec ?? null;
+    const draftEndSec = props.draftRegion?.endSec ?? null;
     useEffect(() => {
       const regions = regionsRef.current;
       if (!regions || loading) return;
@@ -340,19 +345,19 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
         .getRegions()
         .find((r) => r.id === DRAFT_REGION_ID)
         ?.remove();
-      if (!props.draftRegion) return;
+      if (draftStartSec === null || draftEndSec === null) return;
       const color = isAuthorColor(props.authorColor)
         ? withAlpha(props.authorColor, 0.25)
         : FALLBACK_DRAG_COLOR;
       regions.addRegion({
         id: DRAFT_REGION_ID,
-        start: props.draftRegion.startSec,
-        end: props.draftRegion.endSec,
+        start: draftStartSec,
+        end: draftEndSec,
         color,
         drag: false,
         resize: false,
       });
-    }, [props.draftRegion, props.authorColor, loading]);
+    }, [draftStartSec, draftEndSec, props.authorColor, loading]);
 
     return (
       <div className="waveform">
