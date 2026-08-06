@@ -40,7 +40,9 @@ interface WaveformViewProps {
 /** Used only if a drag-selection happens before this device's color has resolved. */
 const FALLBACK_DRAG_COLOR = 'rgba(79, 140, 255, 0.25)';
 
-/** Finest zoom level, in pixels per second of audio. */
+/** Finest zoom level under normal conditions. For very short clips whose fit-to-width
+ *  level already exceeds this, fit-to-width wins — you must always be able to see the
+ *  whole clip, so the effective cap can exceed this constant in that case. */
 const MAX_PX_PER_SEC = 1000;
 /** Controls how much one wheel "notch" changes the zoom level. */
 const ZOOM_WHEEL_SENSITIVITY = 0.0025;
@@ -191,7 +193,10 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
         const fit = getFitPxPerSec();
         if (!fit) return;
         ws.zoom(fit);
-        pxPerSecRef.current = fit;
+        // Store 0, not `fit` itself: a later container resize (e.g. the window growing)
+        // changes what "fit" means, and the next handleWheel call must recompute it fresh
+        // rather than resume from this now-stale value.
+        pxPerSecRef.current = 0;
         ws.setScroll(0);
       };
 

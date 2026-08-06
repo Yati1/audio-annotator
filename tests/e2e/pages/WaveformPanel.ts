@@ -45,7 +45,7 @@ export class WaveformPanel {
   private scrollContainer() {
     return this.canvas().evaluate((el) => {
       const host = el.firstElementChild as (HTMLElement & { shadowRoot: ShadowRoot }) | null;
-      const sc = host?.shadowRoot.querySelector('.scroll') as HTMLElement | undefined;
+      const sc = host?.shadowRoot?.querySelector('.scroll') as HTMLElement | undefined;
       if (!sc) throw new Error('wavesurfer scroll container not found');
       return {
         scrollWidth: sc.scrollWidth,
@@ -63,6 +63,13 @@ export class WaveformPanel {
 
   async scrollLeft(): Promise<number> {
     return (await this.scrollContainer()).scrollLeft;
+  }
+
+  /** Ratio of the zoomed-in content width to the visible container width — i.e. how far
+   *  zoomed in the waveform currently is, independent of the container's own size. */
+  async zoomRatio(): Promise<number> {
+    const { scrollWidth, clientWidth } = await this.scrollContainer();
+    return scrollWidth / clientWidth;
   }
 
   /** Scrolls the mouse wheel, centered on the waveform, to zoom in (or out with a positive deltaY). */

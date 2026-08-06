@@ -43,4 +43,29 @@ test.describe('waveform zoom and pan', () => {
 
     expect(await app.transport.currentSeconds()).toBeCloseTo(before, 1);
   });
+
+  test('zooms relative to the current fit after the container is resized following a reset', async ({
+    app,
+    page,
+  }) => {
+    // Reset while narrow, so a zoom-level reference keyed off "fit-to-width" captures
+    // this narrow width's fit value.
+    await page.setViewportSize({ width: 380, height: 800 });
+    await page.waitForTimeout(300);
+    await app.waveform.wheelZoom(-200, 5);
+    await app.waveform.resetView();
+    expect(await app.waveform.isZoomedIn()).toBe(false);
+
+    // Grow the container; wavesurfer's own debounced ResizeObserver re-renders at the
+    // new, wider fit-to-width automatically, without any zoom()/reset() call from us.
+    await page.setViewportSize({ width: 1400, height: 800 });
+    await page.waitForTimeout(300);
+    expect(await app.waveform.isZoomedIn()).toBe(false);
+
+    // A single zoom-in step now should scale relative to the *current* (wide) fit, not
+    // a value cached from before the resize — otherwise this lands far short of the
+    // zoom level a wheel step of this size is supposed to reach.
+    await app.waveform.wheelZoom(-700, 1);
+    expect(await app.waveform.zoomRatio()).toBeGreaterThan(4);
+  });
 });
