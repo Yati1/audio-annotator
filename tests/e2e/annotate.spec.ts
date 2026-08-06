@@ -38,6 +38,20 @@ test.describe('annotate', () => {
     await expect(app.annotations.itemByNote('Region via drag').locator()).toBeVisible();
   });
 
+  test('keeps the selection box visible on the waveform while its comment is typed', async ({
+    app,
+  }) => {
+    await app.waveform.dragSelectRegion(0.2, 0.6);
+    const draftBox = app.waveform.canvas().locator('[part~="draft-region"]');
+    await expect(draftBox).toBeVisible();
+
+    await app.draftDialog.fillNote('Typing a note…');
+    await expect(draftBox).toBeVisible();
+
+    await app.draftDialog.save();
+    await expect(draftBox).not.toBeVisible();
+  });
+
   test('region playback stops at the end of the region (FR-003)', async ({ app }) => {
     // Fixture is 4s; + Region at playhead 0 creates a start=0..end=min(0+5,4)=4 region.
     await app.transport.startRegion();

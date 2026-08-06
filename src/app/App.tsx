@@ -153,6 +153,9 @@ export function App(): ReactNode {
               annotations={annotations}
               selectedId={selectedId}
               authorColor={authorColor}
+              draftRegion={
+                draft?.kind === 'region' ? { startSec: draft.startSec, endSec: draft.endSec } : null
+              }
               onReady={setDuration}
               onTime={setCurrentSec}
               onPlayState={setPlaying}
