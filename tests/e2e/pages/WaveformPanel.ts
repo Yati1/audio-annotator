@@ -40,4 +40,64 @@ export class WaveformPanel {
     await this.page.mouse.move(x2, y, { steps: 5 });
     await this.page.mouse.up();
   }
+
+  /** wavesurfer's internal scroll container, reached through its open shadow DOM. */
+  private scrollContainer() {
+    return this.canvas().evaluate((el) => {
+      const host = el.firstElementChild as (HTMLElement & { shadowRoot: ShadowRoot }) | null;
+      const sc = host?.shadowRoot?.querySelector('.scroll') as HTMLElement | undefined;
+      if (!sc) throw new Error('wavesurfer scroll container not found');
+      return {
+        scrollWidth: sc.scrollWidth,
+        clientWidth: sc.clientWidth,
+        scrollLeft: sc.scrollLeft,
+      };
+    });
+  }
+
+  /** True once zoomed in past fit-to-width, i.e. the waveform has become scrollable. */
+  async isZoomedIn(): Promise<boolean> {
+    const { scrollWidth, clientWidth } = await this.scrollContainer();
+    return scrollWidth > clientWidth;
+  }
+
+  async scrollLeft(): Promise<number> {
+    return (await this.scrollContainer()).scrollLeft;
+  }
+
+  /** Ratio of the zoomed-in content width to the visible container width — i.e. how far
+   *  zoomed in the waveform currently is, independent of the container's own size. */
+  async zoomRatio(): Promise<number> {
+    const { scrollWidth, clientWidth } = await this.scrollContainer();
+    return scrollWidth / clientWidth;
+  }
+
+  /** Scrolls the mouse wheel, centered on the waveform, to zoom in (or out with a positive deltaY). */
+  async wheelZoom(deltaY: number, times = 1): Promise<void> {
+    const box = await this.canvas().boundingBox();
+    if (!box) throw new Error('waveform canvas not visible');
+    await this.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    for (let i = 0; i < times; i++) {
+      await this.page.mouse.wheel(0, deltaY);
+    }
+  }
+
+  /** Holds both mouse buttons and drags horizontally by `dx` pixels, centered on the waveform. */
+  async panBy(dx: number): Promise<void> {
+    const box = await this.canvas().boundingBox();
+    if (!box) throw new Error('waveform canvas not visible');
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    await this.page.mouse.move(cx, cy);
+    await this.page.mouse.down({ button: 'left' });
+    await this.page.mouse.down({ button: 'right' });
+    await this.page.mouse.move(cx + dx, cy, { steps: 5 });
+    await this.page.mouse.up({ button: 'right' });
+    await this.page.mouse.up({ button: 'left' });
+  }
+
+  /** Resets zoom and pan to the default fit-to-width view. */
+  async resetView(): Promise<void> {
+    await this.canvas().dblclick();
+  }
 }
