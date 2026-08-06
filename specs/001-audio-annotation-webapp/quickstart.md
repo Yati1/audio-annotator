@@ -64,7 +64,7 @@ reload (FR-013/FR-014/FR-016).
 ### Scenario C — Export → import round-trip (US3, SC-003, SC-007)
 
 1. Export a bundle from a project with annotations and replies.
-2. Confirm a single `.aannz`/zip downloads containing `annotations.json` + `audio/<file>`.
+2. Confirm a single `.aaz`/zip downloads containing `annotations.json` + `audio/<file>`.
 3. In a fresh browser profile (or another device, offline), import the bundle.
 
 **Expected**: Audio, annotations, and threads are restored exactly, with no network

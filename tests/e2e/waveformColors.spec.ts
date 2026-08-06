@@ -60,7 +60,7 @@ test.describe('waveform annotation colors', () => {
     });
     const bundle = await buildValidBundle(project, audioBytes);
     await app.importExport.importBundle({
-      name: 'other.aannz',
+      name: 'other.aaz',
       mimeType: 'application/zip',
       buffer: bundle,
     });

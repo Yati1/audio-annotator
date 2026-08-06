@@ -6,13 +6,13 @@ channel (email, cloud drive) with no app or network (FR-018, FR-020, SC-007).
 
 ## File extension & MIME
 
-- Recommended extension: `.aannz` (or `.zip`). Content is a valid zip.
-- Suggested export name: `<project-title>-<yyyymmdd>.aannz`.
+- Recommended extension: `.aaz` (annotated audio zip; or `.zip`). Content is a valid zip.
+- Suggested export name: `<project-title>-<yyyymmdd>.aaz`.
 
 ## Archive layout
 
 ```text
-<bundle>.aannz (zip)
+<bundle>.aaz (zip)
 ├── annotations.json        # required; UTF-8; schema in annotations.schema.json
 └── audio/
     └── <original-file>     # required; the unmodified source audio (e.g. interview.mp3)

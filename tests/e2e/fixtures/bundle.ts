@@ -1,5 +1,5 @@
 /**
- * Bundle (.aannz zip) fixtures for E2E tests. Valid bundles reuse the app's own
+ * Bundle (.aaz zip) fixtures for E2E tests. Valid bundles reuse the app's own
  * `buildManifest`/`exportBundle` so fixtures never drift from the real schema; only the
  * deliberately-broken cases are hand-built.
  */

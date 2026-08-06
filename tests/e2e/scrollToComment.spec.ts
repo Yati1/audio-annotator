@@ -53,7 +53,7 @@ test.describe('scroll to selected comment', () => {
     });
     const bundle = await buildValidBundle(project, audioBytes);
     await app.importExport.importBundle({
-      name: 'many.aannz',
+      name: 'many.aaz',
       mimeType: 'application/zip',
       buffer: bundle,
     });
@@ -116,7 +116,7 @@ test.describe('scroll to selected comment', () => {
     });
     const bundle = await buildValidBundle(project, audioBytes);
     await app.importExport.importBundle({
-      name: 'many-with-point.aannz',
+      name: 'many-with-point.aaz',
       mimeType: 'application/zip',
       buffer: bundle,
     });
@@ -183,7 +183,7 @@ test.describe('scroll to selected comment', () => {
     });
     const bundle = await buildValidBundle(project, audioBytes);
     await app.importExport.importBundle({
-      name: 'tricky.aannz',
+      name: 'tricky.aaz',
       mimeType: 'application/zip',
       buffer: bundle,
     });
