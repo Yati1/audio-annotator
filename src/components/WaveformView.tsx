@@ -116,6 +116,11 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
 
     useEffect(() => {
       if (!containerRef.current) return;
+      // Reset for the new file: annotations/draft-region render effects gate on this,
+      // and must not run against the outgoing instance's now-stale `loading: false`
+      // before the new one's duration is known — wavesurfer clamps region bounds to 0
+      // while duration is 0, producing an untracked, unremovable orphan region.
+      setLoading(true);
       const regions = RegionsPlugin.create();
       const ws = WaveSurfer.create({
         container: containerRef.current,

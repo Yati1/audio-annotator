@@ -52,6 +52,16 @@ test.describe('annotate', () => {
     await expect(draftBox).not.toBeVisible();
   });
 
+  test('discards an in-progress draft when a new audio file is opened', async ({ app }) => {
+    await app.waveform.dragSelectRegion(0.2, 0.6);
+    await expect(app.draftDialog.locator()).toBeVisible();
+
+    await app.openAudioFixture(makeWavFile({ durationSec: 4 }));
+
+    await expect(app.draftDialog.locator()).not.toBeVisible();
+    await expect(app.waveform.canvas().locator('[part~="draft-region"]')).not.toBeVisible();
+  });
+
   test('region playback stops at the end of the region (FR-003)', async ({ app }) => {
     // Fixture is 4s; + Region at playhead 0 creates a start=0..end=min(0+5,4)=4 region.
     await app.transport.startRegion();
