@@ -30,6 +30,9 @@ interface WaveformViewProps {
   selectedId: string | null;
   /** This device's own author color, used to preview a not-yet-saved drag selection. */
   authorColor: string;
+  /** The region-kind draft currently being composed, if any — kept visible on the
+   *  waveform for the whole time its comment is being typed. */
+  draftRegion: { startSec: number; endSec: number } | null;
   onReady(durationSec: number): void;
   onTime(sec: number): void;
   onPlayState(playing: boolean): void;
@@ -39,6 +42,10 @@ interface WaveformViewProps {
 
 /** Used only if a drag-selection happens before this device's color has resolved. */
 const FALLBACK_DRAG_COLOR = 'rgba(79, 140, 255, 0.25)';
+/** Reserved id for the persistent region that visualizes `draftRegion` while its
+ *  comment is being composed — excluded from region-created handling below since
+ *  `regions.addRegion` re-emits that event for programmatically-added regions too. */
+const DRAFT_REGION_ID = 'draft-region';
 
 /** Finest zoom level under normal conditions. For very short clips whose fit-to-width
  *  level already exceeds this, fit-to-width wins — you must always be able to see the
@@ -109,6 +116,11 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
 
     useEffect(() => {
       if (!containerRef.current) return;
+      // Reset for the new file: annotations/draft-region render effects gate on this,
+      // and must not run against the outgoing instance's now-stale `loading: false`
+      // before the new one's duration is known — wavesurfer clamps region bounds to 0
+      // while duration is 0, producing an untracked, unremovable orphan region.
+      setLoading(true);
       const regions = RegionsPlugin.create();
       const ws = WaveSurfer.create({
         container: containerRef.current,
@@ -138,14 +150,16 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
       needsDragColorSyncRef.current = !authorColorResolved;
       disableDragSelectionRef.current = regions.enableDragSelection({ color: dragColor });
       regions.on('region-created', (region) => {
+        // Programmatically-added regions (existing annotations, the draft preview)
+        // re-emit this same event via `regions.addRegion` — they're never phantom
+        // pan artifacts, so check for them first regardless of `panHappenedRef`.
+        if (region.id.startsWith('anno-') || region.id === DRAFT_REGION_ID) return;
         // A two-button pan can incidentally arm/advance the regions plugin's own
         // drag-selection (it isn't aware of the second button); discard the result.
         if (panHappenedRef.current) {
           region.remove();
           return;
         }
-        // User-drawn regions have no id yet; existing ones are prefixed below.
-        if (region.id.startsWith('anno-')) return;
         cbRef.current.onPendingRegion({
           startSec: region.start,
           endSec: region.end > region.start ? region.end : null,
@@ -315,6 +329,36 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
         });
       }
     }, [props.annotations, loading]);
+
+    // Keep a persistent region showing the in-progress draft's bounds for as long as
+    // its comment is being composed. The drag-created region itself is still removed
+    // the instant the drag ends (see `region-created` above) — this effect adds a
+    // separate region in its place to represent the draft.
+    // Depends on the primitive bounds, not `props.draftRegion` itself: App passes a new
+    // object literal on every render, which would otherwise remove/re-add this region on
+    // every keystroke in the draft note textarea.
+    const draftStartSec = props.draftRegion?.startSec ?? null;
+    const draftEndSec = props.draftRegion?.endSec ?? null;
+    useEffect(() => {
+      const regions = regionsRef.current;
+      if (!regions || loading) return;
+      regions
+        .getRegions()
+        .find((r) => r.id === DRAFT_REGION_ID)
+        ?.remove();
+      if (draftStartSec === null || draftEndSec === null) return;
+      const color = isAuthorColor(props.authorColor)
+        ? withAlpha(props.authorColor, 0.25)
+        : FALLBACK_DRAG_COLOR;
+      regions.addRegion({
+        id: DRAFT_REGION_ID,
+        start: draftStartSec,
+        end: draftEndSec,
+        color,
+        drag: false,
+        resize: false,
+      });
+    }, [draftStartSec, draftEndSec, props.authorColor, loading]);
 
     return (
       <div className="waveform">

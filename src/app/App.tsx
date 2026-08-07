@@ -47,6 +47,13 @@ export function App(): ReactNode {
     void init();
   }, [init]);
 
+  // Discard any in-progress draft when the audio file changes — otherwise its
+  // timestamps (and, on the waveform, its draft region) stay pinned to the old file.
+  useEffect(() => {
+    setDraft(null);
+    setDraftNote('');
+  }, [objectUrl]);
+
   // Keyboard shortcuts for primary flows (FR-024).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -153,6 +160,9 @@ export function App(): ReactNode {
               annotations={annotations}
               selectedId={selectedId}
               authorColor={authorColor}
+              draftRegion={
+                draft?.kind === 'region' ? { startSec: draft.startSec, endSec: draft.endSec } : null
+              }
               onReady={setDuration}
               onTime={setCurrentSec}
               onPlayState={setPlaying}
