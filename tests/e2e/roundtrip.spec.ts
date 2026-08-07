@@ -30,7 +30,7 @@ test.describe('roundtrip', () => {
       await freshPage.goto('/');
       await freshApp.ensureSession('Ben');
       await freshApp.importExport.importBundle({
-        name: 'export.aannz',
+        name: 'export.aaz',
         mimeType: 'application/zip',
         buffer: bytes,
       });
@@ -89,7 +89,7 @@ test.describe('roundtrip', () => {
     const bundleA = await buildValidBundle(original, audioBytes);
 
     await app.importExport.importBundle({
-      name: 'a.aannz',
+      name: 'a.aaz',
       mimeType: 'application/zip',
       buffer: bundleA,
     });
@@ -118,7 +118,7 @@ test.describe('roundtrip', () => {
     const bundleB = await buildValidBundle(modified, audioBytes);
 
     await app.importExport.importBundle({
-      name: 'b.aannz',
+      name: 'b.aaz',
       mimeType: 'application/zip',
       buffer: bundleB,
     });

@@ -21,7 +21,7 @@ export function ImportExportControls(): ReactNode {
     const a = document.createElement('a');
     const name = (project?.title ?? 'annotations').replace(/[^\w.-]+/g, '_');
     a.href = url;
-    a.download = `${name}.aannz`;
+    a.download = `${name}.aaz`;
     a.click();
     URL.revokeObjectURL(url);
     setMessage('Bundle exported.');
@@ -54,7 +54,7 @@ export function ImportExportControls(): ReactNode {
       <input
         ref={inputRef}
         type="file"
-        accept=".aannz,.zip,application/zip"
+        accept=".aaz,.zip,application/zip"
         className="visually-hidden"
         onChange={onImportFile}
         data-testid="import-bundle-input"

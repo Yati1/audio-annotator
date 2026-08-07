@@ -37,7 +37,7 @@ test.describe('errors', () => {
     await app.draftDialog.createWithNote('Existing annotation');
 
     await app.importExport.importBundle({
-      name: 'broken.aannz',
+      name: 'broken.aaz',
       mimeType: 'application/zip',
       buffer: corruptZipBytes(),
     });
@@ -52,7 +52,7 @@ test.describe('errors', () => {
     const full = makeFullProject();
 
     await app.importExport.importBundle({
-      name: 'no-audio.aannz',
+      name: 'no-audio.aaz',
       mimeType: 'application/zip',
       buffer: buildBundleMissingAudio(full),
     });
@@ -66,7 +66,7 @@ test.describe('errors', () => {
     const audioBytes = makeWavFile({ durationSec: 2 }).buffer;
 
     await app.importExport.importBundle({
-      name: 'newer-schema.aannz',
+      name: 'newer-schema.aaz',
       mimeType: 'application/zip',
       buffer: buildBundleWithNewerSchema(full, audioBytes),
     });
