@@ -331,8 +331,9 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
     }, [props.annotations, loading]);
 
     // Keep a persistent region showing the in-progress draft's bounds for as long as
-    // its comment is being composed — replaces the old behavior of removing the
-    // drag-created region the instant the drag ended (see `region-created` above).
+    // its comment is being composed. The drag-created region itself is still removed
+    // the instant the drag ends (see `region-created` above) — this effect adds a
+    // separate region in its place to represent the draft.
     // Depends on the primitive bounds, not `props.draftRegion` itself: App passes a new
     // object literal on every render, which would otherwise remove/re-add this region on
     // every keystroke in the draft note textarea.
