@@ -12,12 +12,90 @@ replies, and share your work by exporting a self-contained bundle that anyone ca
 - **Point and region annotations** — mark a single timestamp or a span of audio with a text note
 - **Threaded replies** — respond to any annotation; discussions are attached to the audio they reference
 - **Offline-first** — all data lives in your browser's IndexedDB; nothing is sent to a server
-- **Share via bundle** — export a zip (audio + `annotations.json`) and send it by email, Drive, etc.; the recipient imports it and can add their own annotations then send it back
+- **Share via bundle** — export a `.aaz` file (a zip containing the audio and `annotations.json`) and send it by email, Drive, etc.; the recipient imports it and can add their own annotations then send it back
 - **Merge on import** — re-importing a bundle from the same original merges annotations and replies by unique ID; no data is silently lost
 
 ## Supported audio formats
 
 MP3, WAV, OGG, M4A / AAC, FLAC (native browser decoding, no transcoding)
+
+---
+
+## Using the app
+
+### 1. Set your display name
+
+The first time you open the app you'll be asked for a display name. It's stored
+locally and attached to everything you annotate — there are no accounts or
+sign-in. You can change it any time from **Change name** in the header.
+
+### 2. Open an audio file
+
+Click **Open audio…** in the header and pick a local file. The waveform renders
+in the stage below; nothing leaves your browser.
+
+![Empty state, before any audio is loaded](docs/screenshots/empty-state.png)
+
+![Waveform rendered after opening an audio file](docs/screenshots/waveform-loaded.png)
+
+### 3. Add a point annotation
+
+Play or scrub to the moment you want to mark, then click **+ Point** in the
+transport bar (or press <kbd>P</kbd>). Type a note and click **Save**.
+
+![Filling in a note for a new point annotation](docs/screenshots/new-point-dialog.png)
+
+![Point annotation shown on the waveform and in the side panel](docs/screenshots/point-annotation.png)
+
+### 4. Add a region annotation
+
+Drag across a span of the waveform to select it, or click **+ Region** (or
+press <kbd>R</kbd>) to start a 5-second region at the playhead (shorter if
+started within 5 seconds of the end of the file), then add a note the same
+way. You can also click directly on a region drawn on the waveform to select
+it.
+
+![Dragging to create a region annotation, then saving its note](docs/screenshots/create-region-annotation.gif)
+
+The waveform also supports a scroll wheel to zoom in/out, a double-click to
+reset the zoom to fit the whole clip, and dragging with both mouse buttons
+held to pan.
+
+Press **►** on any annotation in the side panel to play it back — regions
+play from their start and stop automatically at their end; points move the
+playhead to that moment. Clicking elsewhere on the row just selects/highlights
+it.
+
+### 5. Reply to an annotation
+
+Every annotation has its own threaded discussion. Type in the **Reply…** box
+under any annotation and click **Reply** to add to the thread; replies are
+attributed to your display name.
+
+![A reply added under a point annotation](docs/screenshots/reply-thread.png)
+
+### 6. Share your work
+
+Use **Export bundle** to download a `.aaz` file — a zip containing the audio
+and all annotations/replies. Send it however you like — email, Slack, a shared drive.
+The recipient opens the app and clicks **Import bundle…** to load it.
+
+![Export and import controls in the header](docs/screenshots/header-controls.png)
+
+Re-importing a bundle that traces back to the same original audio **merges**
+annotations and replies by ID instead of duplicating them, so a
+back-and-forth of edits between collaborators never loses data.
+
+### Keyboard shortcuts
+
+| Key | Action |
+|-----|--------|
+| <kbd>Space</kbd> | Play / pause |
+| <kbd>P</kbd> | Start a new point annotation at the playhead |
+| <kbd>R</kbd> | Start a new 5-second region annotation at the playhead |
+
+Shortcuts are inert until an audio file is loaded, and are ignored while
+you're typing in a text field.
 
 ---
 
