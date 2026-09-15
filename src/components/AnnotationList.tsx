@@ -7,8 +7,11 @@ interface AnnotationListProps {
   annotations: Annotation[];
   repliesByAnnotation: Record<string, Reply[]>;
   selectedId: string | null;
+  /** Id of the annotation currently being played back, if any. */
+  playingId: string | null;
   onSelect(id: string): void;
   onPlay(a: Annotation): void;
+  onStop(): void;
   onEdit(id: string, note: string): void;
   onDelete(id: string): void;
   onAddReply(annotationId: string, text: string): void;
@@ -20,8 +23,10 @@ export function AnnotationList({
   annotations,
   repliesByAnnotation,
   selectedId,
+  playingId,
   onSelect,
   onPlay,
+  onStop,
   onEdit,
   onDelete,
   onAddReply,
@@ -61,8 +66,10 @@ export function AnnotationList({
           annotation={a}
           replies={repliesByAnnotation[a.id] ?? []}
           selected={a.id === selectedId}
+          playing={a.id === playingId}
           onSelect={() => onSelect(a.id)}
           onPlay={() => onPlay(a)}
+          onStop={onStop}
           onEdit={(note) => onEdit(a.id, note)}
           onDelete={() => onDelete(a.id)}
           onAddReply={(text) => onAddReply(a.id, text)}

@@ -37,7 +37,19 @@ export class AnnotationItemHandle {
   }
 
   async play(): Promise<void> {
-    await this.root.getByRole('button', { name: 'Play this annotation' }).click();
+    await this.playButton().click();
+  }
+
+  async stop(): Promise<void> {
+    await this.stopButton().click();
+  }
+
+  playButton(): Locator {
+    return this.root.getByRole('button', { name: 'Play this annotation' });
+  }
+
+  stopButton(): Locator {
+    return this.root.getByRole('button', { name: 'Stop this annotation' });
   }
 
   async select(): Promise<void> {

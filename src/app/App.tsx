@@ -39,6 +39,7 @@ export function App(): ReactNode {
   const waveRef = useRef<WaveformHandle>(null);
   const guideButtonRef = useRef<HTMLButtonElement>(null);
   const [playing, setPlaying] = useState(false);
+  const [playingAnnotationId, setPlayingAnnotationId] = useState<string | null>(null);
   const [currentSec, setCurrentSec] = useState(0);
   const [duration, setDuration] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -119,13 +120,27 @@ export function App(): ReactNode {
     guideButtonRef.current?.focus();
   };
 
+  // Every way playback can end — a region reaching its bound, the track running out,
+  // Space, the transport's Pause, another annotation's stop button, a new file being
+  // opened — surfaces here, so clearing the id in one place keeps each row's play/stop
+  // button honest without tracking those paths individually.
+  const onPlayState = (isPlaying: boolean) => {
+    setPlaying(isPlaying);
+    if (!isPlaying) setPlayingAnnotationId(null);
+  };
+
   const playAnnotation = (a: Annotation) => {
     setSelectedId(a.id);
+    setPlayingAnnotationId(a.id);
     if (a.kind === 'region' && a.endSec !== null) {
       waveRef.current?.playRegion(a.startSec, a.endSec);
     } else {
-      waveRef.current?.seekTo(a.startSec);
+      waveRef.current?.playFrom(a.startSec);
     }
+  };
+
+  const stopAnnotation = () => {
+    waveRef.current?.pause();
   };
 
   return (
@@ -180,7 +195,7 @@ export function App(): ReactNode {
               }
               onReady={setDuration}
               onTime={setCurrentSec}
-              onPlayState={setPlaying}
+              onPlayState={onPlayState}
               onPendingRegion={onPendingRegion}
               onSelectAnnotation={setSelectedId}
             />
@@ -242,8 +257,10 @@ export function App(): ReactNode {
               annotations={annotations}
               repliesByAnnotation={repliesByAnnotation}
               selectedId={selectedId}
+              playingId={playingAnnotationId}
               onSelect={setSelectedId}
               onPlay={playAnnotation}
+              onStop={stopAnnotation}
               onEdit={(id, note) => void editAnnotation(id, { note })}
               onDelete={(id) => void deleteAnnotation(id)}
               onAddReply={(annotationId, text) => void addReply(annotationId, text)}

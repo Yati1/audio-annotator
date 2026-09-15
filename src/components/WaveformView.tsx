@@ -18,9 +18,10 @@ export interface PendingRegion {
 
 export interface WaveformHandle {
   playPause(): void;
-  stop(): void;
+  pause(): void;
   getCurrentTime(): number;
   seekTo(sec: number): void;
+  playFrom(startSec: number): void;
   playRegion(startSec: number, endSec: number): void;
 }
 
@@ -90,8 +91,8 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
       playPause() {
         void wsRef.current?.playPause();
       },
-      stop() {
-        wsRef.current?.stop();
+      pause() {
+        wsRef.current?.pause();
       },
       getCurrentTime() {
         return wsRef.current?.getCurrentTime() ?? 0;
@@ -99,18 +100,14 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
       seekTo(sec) {
         wsRef.current?.setTime(sec);
       },
+      playFrom(startSec) {
+        void wsRef.current?.play(startSec);
+      },
       playRegion(startSec, endSec) {
-        const ws = wsRef.current;
-        if (!ws) return;
-        ws.setTime(startSec);
-        void ws.play();
-        const stopAt = () => {
-          if (ws.getCurrentTime() >= endSec) {
-            ws.pause();
-            ws.un('timeupdate', stopAt);
-          }
-        };
-        ws.on('timeupdate', stopAt);
+        // wavesurfer's own bounded playback: it pauses at `endSec` and drops the bound
+        // on pause/seek/end, so stopping a region early can't leak a stop condition
+        // onto whatever plays next.
+        void wsRef.current?.play(startSec, endSec);
       },
     }));
 
@@ -142,6 +139,10 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
       ws.on('timeupdate', (t) => cbRef.current.onTime(t));
       ws.on('play', () => cbRef.current.onPlayState(true));
       ws.on('pause', () => cbRef.current.onPlayState(false));
+      // Reaching the end of the track emits only 'finish', never 'pause' — without this
+      // the transport (and any annotation's stop button) would stay stuck in its
+      // playing state after the audio runs out.
+      ws.on('finish', () => cbRef.current.onPlayState(false));
 
       const authorColorResolved = isAuthorColor(cbRef.current.authorColor);
       const dragColor = authorColorResolved
