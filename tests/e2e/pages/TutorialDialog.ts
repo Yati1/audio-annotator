@@ -53,4 +53,15 @@ export class TutorialDialog {
     await this.page.mouse.move(5, 5, { steps: 5 });
     await this.page.mouse.up();
   }
+
+  /** Drag from the backdrop and release inside the panel, as a text selection
+   *  that starts just outside the panel edge does. */
+  async dragFromBackdropOntoPanel(): Promise<void> {
+    const box = await this.section('1. Set your display name').boundingBox();
+    if (!box) throw new Error('Guide content is not laid out; cannot end a drag on it.');
+    await this.page.mouse.move(5, 5);
+    await this.page.mouse.down();
+    await this.page.mouse.move(box.x + 5, box.y + 5, { steps: 5 });
+    await this.page.mouse.up();
+  }
 }

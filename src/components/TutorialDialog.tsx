@@ -32,12 +32,12 @@ export function TutorialDialog({ onClose }: { onClose: () => void }): ReactNode 
       onMouseDown={(e) => {
         pressedBackdrop.current = e.target === e.currentTarget;
       }}
-      // Only a press *and* release on the backdrop itself dismisses. Testing the click
-      // alone isn't enough on two counts: clicks inside the panel bubble up to here, and
-      // a click whose press and release land on different elements is dispatched to their
-      // common ancestor — so drag-selecting this guide's prose and releasing past the
-      // panel edge would otherwise close it.
-      onClick={(e) => {
+      // Only a press *and* release on the backdrop itself dismisses, checked on mouseup
+      // rather than click: a click whose press and release land on different elements is
+      // dispatched to their common ancestor rather than to the release target, so relying
+      // on click would close the dialog for a drag that starts or ends on the backdrop but
+      // not both — e.g. drag-selecting this guide's prose and releasing past the panel edge.
+      onMouseUp={(e) => {
         if (e.target === e.currentTarget && pressedBackdrop.current) onClose();
       }}
     >

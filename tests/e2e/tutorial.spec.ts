@@ -47,6 +47,17 @@ test.describe('in-app guide', () => {
     await expect(app.tutorial.locator()).toBeVisible();
   });
 
+  test('survives a text-selection drag that starts outside the panel and ends inside it', async ({
+    app,
+  }) => {
+    await app.ensureSession('Kay');
+    await app.tutorial.open();
+
+    await app.tutorial.dragFromBackdropOntoPanel();
+
+    await expect(app.tutorial.locator()).toBeVisible();
+  });
+
   test('returns focus to the Guide button on close', async ({ app }) => {
     await app.ensureSession('Kay');
     await app.tutorial.open();
