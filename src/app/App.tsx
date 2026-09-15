@@ -7,6 +7,7 @@ import { AnnotationList } from '../components/AnnotationList';
 import { ImportExportControls } from '../components/ImportExportControls';
 import { DisplayNamePrompt } from '../components/DisplayNamePrompt';
 import { DisplayNameControl } from '../components/DisplayNameControl';
+import { TutorialDialog } from '../components/TutorialDialog';
 import { ErrorState, Loading, Toast } from '../components/states/States';
 import type { Annotation } from '../features/types';
 
@@ -36,12 +37,14 @@ export function App(): ReactNode {
   const clearNotice = useStore((s) => s.clearNotice);
 
   const waveRef = useRef<WaveformHandle>(null);
+  const guideButtonRef = useRef<HTMLButtonElement>(null);
   const [playing, setPlaying] = useState(false);
   const [currentSec, setCurrentSec] = useState(0);
   const [duration, setDuration] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [draftNote, setDraftNote] = useState('');
+  const [tutorialOpen, setTutorialOpen] = useState(false);
 
   useEffect(() => {
     void init();
@@ -59,6 +62,8 @@ export function App(): ReactNode {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+      // The guide covers the workspace, so its shortcuts would act out of sight.
+      if (tutorialOpen) return;
       if (!audio) return;
       if (e.code === 'Space') {
         e.preventDefault();
@@ -74,7 +79,7 @@ export function App(): ReactNode {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [audio, duration]);
+  }, [audio, duration, tutorialOpen]);
 
   const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -109,6 +114,11 @@ export function App(): ReactNode {
     }
   };
 
+  const closeTutorial = () => {
+    setTutorialOpen(false);
+    guideButtonRef.current?.focus();
+  };
+
   const playAnnotation = (a: Annotation) => {
     setSelectedId(a.id);
     if (a.kind === 'region' && a.endSec !== null) {
@@ -137,8 +147,13 @@ export function App(): ReactNode {
           </label>
           <ImportExportControls />
           <DisplayNameControl />
+          <button ref={guideButtonRef} type="button" onClick={() => setTutorialOpen(true)}>
+            Guide
+          </button>
         </div>
       </header>
+
+      {tutorialOpen && <TutorialDialog onClose={closeTutorial} />}
 
       {error && <ErrorState message={error} onDismiss={clearError} />}
       {notice && <Toast message={notice} onDismiss={clearNotice} />}

@@ -6,6 +6,7 @@ import { TransportBar } from './TransportBar';
 import { DraftDialog } from './DraftDialog';
 import { AnnotationPanel } from './AnnotationPanel';
 import { ImportExportPanel } from './ImportExportPanel';
+import { TutorialDialog } from './TutorialDialog';
 import type { WavFile } from '../fixtures/wav';
 
 /** Root composition object for the single-view app, mirroring src/components/* 1:1. */
@@ -17,6 +18,7 @@ export class AppPage {
   readonly draftDialog: DraftDialog;
   readonly annotations: AnnotationPanel;
   readonly importExport: ImportExportPanel;
+  readonly tutorial: TutorialDialog;
 
   constructor(readonly page: Page) {
     this.displayNamePrompt = new DisplayNamePrompt(page);
@@ -26,6 +28,7 @@ export class AppPage {
     this.draftDialog = new DraftDialog(page);
     this.annotations = new AnnotationPanel(page);
     this.importExport = new ImportExportPanel(page);
+    this.tutorial = new TutorialDialog(page);
   }
 
   get errorAlert() {

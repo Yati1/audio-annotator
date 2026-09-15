@@ -324,3 +324,64 @@
   justify-content: flex-end;
   gap: var(--space-2);
 }
+
+/* Guide dialog — wider than the form modals so screenshots stay legible, and
+   scrolls internally rather than growing past the viewport. */
+.tutorial {
+  width: min(760px, 92vw);
+  max-height: 88vh;
+}
+
+.tutorial h2 {
+  margin: 0;
+}
+
+.tutorial-body {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding-right: var(--space-2);
+}
+
+.tutorial-body section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tutorial-body h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.tutorial-body p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.tutorial-body img {
+  max-width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+}
+
+.tutorial-shortcuts {
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.tutorial-shortcuts th,
+.tutorial-shortcuts td {
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-3);
+}
+
+.tutorial-body kbd {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
