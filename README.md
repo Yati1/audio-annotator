@@ -62,9 +62,11 @@ reset the zoom to fit the whole clip, and dragging with both mouse buttons
 held to pan.
 
 Press **►** on any annotation in the side panel to play it back — regions
-play from their start and stop automatically at their end; points move the
-playhead to that moment. Clicking elsewhere on the row just selects/highlights
-it.
+play from their start and stop automatically at their end; points play from
+their moment onwards. While it plays, that annotation's **►** becomes a **■**
+you can press to stop; it reverts as soon as playback stops for any reason
+(the region ending, <kbd>Space</kbd>, or another annotation being played).
+Clicking elsewhere on the row just selects/highlights it.
 
 ### 5. Reply to an annotation
 

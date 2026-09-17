@@ -39,6 +39,7 @@ export function App(): ReactNode {
   const waveRef = useRef<WaveformHandle>(null);
   const guideButtonRef = useRef<HTMLButtonElement>(null);
   const [playing, setPlaying] = useState(false);
+  const [playingAnnotationId, setPlayingAnnotationId] = useState<string | null>(null);
   const [currentSec, setCurrentSec] = useState(0);
   const [duration, setDuration] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -52,9 +53,15 @@ export function App(): ReactNode {
 
   // Discard any in-progress draft when the audio file changes — otherwise its
   // timestamps (and, on the waveform, its draft region) stay pinned to the old file.
+  // Also reset playback state: WaveformView is torn down and rebuilt for the new url,
+  // and neither the outgoing instance's teardown nor the incoming one's setup emits
+  // onPlayState, so a mid-playback file switch would otherwise leave the transport
+  // stuck showing Pause with a stale playingAnnotationId.
   useEffect(() => {
     setDraft(null);
     setDraftNote('');
+    setPlaying(false);
+    setPlayingAnnotationId(null);
   }, [objectUrl]);
 
   // Keyboard shortcuts for primary flows (FR-024).
@@ -119,13 +126,28 @@ export function App(): ReactNode {
     guideButtonRef.current?.focus();
   };
 
+  // Every way playback can end while the current file stays loaded — a region reaching
+  // its bound, the track running out, Space, the transport's Pause, another annotation's
+  // stop button — surfaces here, so clearing the id in one place keeps each row's
+  // play/stop button honest without tracking those paths individually. (A file switch is
+  // handled separately above, since swapping WaveformView instances never emits this.)
+  const onPlayState = (isPlaying: boolean) => {
+    setPlaying(isPlaying);
+    if (!isPlaying) setPlayingAnnotationId(null);
+  };
+
   const playAnnotation = (a: Annotation) => {
     setSelectedId(a.id);
+    setPlayingAnnotationId(a.id);
     if (a.kind === 'region' && a.endSec !== null) {
       waveRef.current?.playRegion(a.startSec, a.endSec);
     } else {
-      waveRef.current?.seekTo(a.startSec);
+      waveRef.current?.playFrom(a.startSec);
     }
+  };
+
+  const stopAnnotation = () => {
+    waveRef.current?.pause();
   };
 
   return (
@@ -180,7 +202,7 @@ export function App(): ReactNode {
               }
               onReady={setDuration}
               onTime={setCurrentSec}
-              onPlayState={setPlaying}
+              onPlayState={onPlayState}
               onPendingRegion={onPendingRegion}
               onSelectAnnotation={setSelectedId}
             />
@@ -242,8 +264,10 @@ export function App(): ReactNode {
               annotations={annotations}
               repliesByAnnotation={repliesByAnnotation}
               selectedId={selectedId}
+              playingId={playingAnnotationId}
               onSelect={setSelectedId}
               onPlay={playAnnotation}
+              onStop={stopAnnotation}
               onEdit={(id, note) => void editAnnotation(id, { note })}
               onDelete={(id) => void deleteAnnotation(id)}
               onAddReply={(annotationId, text) => void addReply(annotationId, text)}

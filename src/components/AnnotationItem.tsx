@@ -8,8 +8,11 @@ interface AnnotationItemProps {
   annotation: Annotation;
   replies: Reply[];
   selected: boolean;
+  /** True while this annotation is the one currently being played back. */
+  playing: boolean;
   onSelect(): void;
   onPlay(): void;
+  onStop(): void;
   onEdit(note: string): void;
   onDelete(): void;
   onAddReply(text: string): void;
@@ -21,8 +24,10 @@ export function AnnotationItem({
   annotation,
   replies,
   selected,
+  playing,
   onSelect,
   onPlay,
+  onStop,
   onEdit,
   onDelete,
   onAddReply,
@@ -81,8 +86,12 @@ export function AnnotationItem({
           {annotation.authorName}
         </span>
         <div className="annotation-actions">
-          <button type="button" onClick={onPlay} aria-label="Play this annotation">
-            ►
+          <button
+            type="button"
+            onClick={playing ? onStop : onPlay}
+            aria-label={playing ? 'Stop this annotation' : 'Play this annotation'}
+          >
+            {playing ? '■' : '►'}
           </button>
           <button type="button" onClick={() => setEditing((e) => !e)} aria-label="Edit note">
             ✎
