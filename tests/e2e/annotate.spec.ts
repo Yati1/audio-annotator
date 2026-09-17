@@ -76,6 +76,22 @@ test.describe('annotate', () => {
     expect(current).toBeLessThanOrEqual(4);
   });
 
+  test('an annotation stop button reverts to play at the end of the track', async ({ app }) => {
+    // Fixture is 4s; a point near the end lets playback reach 'finish' quickly.
+    await app.waveform.seekToFraction(0.9);
+    await app.transport.addPoint();
+    await app.draftDialog.createWithNote('Ends with the track');
+    const item = app.annotations.itemByNote('Ends with the track');
+
+    await item.play();
+    await expect(item.stopButton()).toBeVisible();
+
+    await expect.poll(() => app.transport.isPlaying(), { timeout: 10_000 }).toBe(false);
+
+    await expect(item.playButton()).toBeVisible();
+    await expect(item.stopButton()).toHaveCount(0);
+  });
+
   test.describe('annotation play/stop toggle', () => {
     // A longer clip than the outer fixture's 4s: these tests interrupt playback partway
     // through, so the audio has to outlast the interaction.
@@ -134,14 +150,36 @@ test.describe('annotate', () => {
     });
 
     test('a point annotation plays from its timestamp (not just seeks)', async ({ app }) => {
+      // Create the point mid-clip, then seek back to the start — if playFrom ignored
+      // the timestamp and just called play(), playback would resume from 0, not ~15s.
+      await app.waveform.seekToFraction(0.5);
       await app.transport.addPoint();
       await app.draftDialog.createWithNote('Point plays');
+      await app.waveform.seekToFraction(0);
       const item = app.annotations.itemByNote('Point plays');
 
       await item.play();
 
       await expect.poll(() => app.transport.isPlaying()).toBe(true);
       await expect(item.stopButton()).toBeVisible();
+      expect(await app.transport.currentSeconds()).toBeGreaterThanOrEqual(14);
+    });
+
+    test('switching audio files while an annotation plays clears the stale playing state', async ({
+      app,
+    }) => {
+      await app.transport.startRegion();
+      await app.draftDialog.createWithNote('Stop me');
+      const item = app.annotations.itemByNote('Stop me');
+
+      await item.play();
+      await expect(item.stopButton()).toBeVisible();
+      await expect.poll(() => app.transport.isPlaying()).toBe(true);
+
+      await app.openAudioFixture(makeWavFile({ name: 'clip-other.wav', durationSec: 5 }));
+
+      await expect.poll(() => app.transport.isPlaying()).toBe(false);
+      expect(await app.annotations.count()).toBe(0);
     });
   });
 

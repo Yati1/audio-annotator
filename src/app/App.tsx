@@ -53,9 +53,15 @@ export function App(): ReactNode {
 
   // Discard any in-progress draft when the audio file changes — otherwise its
   // timestamps (and, on the waveform, its draft region) stay pinned to the old file.
+  // Also reset playback state: WaveformView is torn down and rebuilt for the new url,
+  // and neither the outgoing instance's teardown nor the incoming one's setup emits
+  // onPlayState, so a mid-playback file switch would otherwise leave the transport
+  // stuck showing Pause with a stale playingAnnotationId.
   useEffect(() => {
     setDraft(null);
     setDraftNote('');
+    setPlaying(false);
+    setPlayingAnnotationId(null);
   }, [objectUrl]);
 
   // Keyboard shortcuts for primary flows (FR-024).
@@ -120,10 +126,11 @@ export function App(): ReactNode {
     guideButtonRef.current?.focus();
   };
 
-  // Every way playback can end — a region reaching its bound, the track running out,
-  // Space, the transport's Pause, another annotation's stop button, a new file being
-  // opened — surfaces here, so clearing the id in one place keeps each row's play/stop
-  // button honest without tracking those paths individually.
+  // Every way playback can end while the current file stays loaded — a region reaching
+  // its bound, the track running out, Space, the transport's Pause, another annotation's
+  // stop button — surfaces here, so clearing the id in one place keeps each row's
+  // play/stop button honest without tracking those paths individually. (A file switch is
+  // handled separately above, since swapping WaveformView instances never emits this.)
   const onPlayState = (isPlaying: boolean) => {
     setPlaying(isPlaying);
     if (!isPlaying) setPlayingAnnotationId(null);
