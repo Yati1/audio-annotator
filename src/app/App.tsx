@@ -19,6 +19,7 @@ export function App(): ReactNode {
   const error = useStore((s) => s.error);
   const notice = useStore((s) => s.notice);
   const audio = useStore((s) => s.audio);
+  const hasProject = useStore((s) => s.project !== null);
   const objectUrl = useStore((s) => s.objectUrl);
   const annotations = useStore((s) => s.annotations);
   const repliesByAnnotation = useStore((s) => s.repliesByAnnotation);
@@ -26,6 +27,7 @@ export function App(): ReactNode {
 
   const init = useStore((s) => s.init);
   const loadAudioFile = useStore((s) => s.loadAudioFile);
+  const newProject = useStore((s) => s.newProject);
   const addPoint = useStore((s) => s.addPoint);
   const addRegion = useStore((s) => s.addRegion);
   const editAnnotation = useStore((s) => s.editAnnotation);
@@ -99,6 +101,12 @@ export function App(): ReactNode {
     void loadAudioFile(file);
   };
 
+  const onNewProject = () => {
+    if (!window.confirm('Start a new project? This cannot be undone.')) return;
+    setSelectedId(null);
+    void newProject();
+  };
+
   const onPendingRegion = (region: PendingRegion) => {
     setDraft({
       kind: 'region',
@@ -167,6 +175,14 @@ export function App(): ReactNode {
               data-testid="open-audio-input"
             />
           </label>
+          <button
+            type="button"
+            onClick={onNewProject}
+            disabled={!hasProject || status === 'loading'}
+            data-testid="new-project-button"
+          >
+            New Project
+          </button>
           <ImportExportControls />
           <DisplayNameControl />
           <button ref={guideButtonRef} type="button" onClick={() => setTutorialOpen(true)}>
