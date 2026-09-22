@@ -39,6 +39,7 @@ export interface AppState {
   init(): Promise<void>;
   setDisplayName(name: string): Promise<void>;
   loadAudioFile(file: File): Promise<void>;
+  newProject(): Promise<void>;
   clearError(): void;
   clearNotice(): void;
 
@@ -153,6 +154,28 @@ export const useStore = create<AppState>((set, get) => ({
       notice: file.size > LARGE_FILE_BYTES ? 'Large file — playback may be slow.' : null,
     });
     await ensureAuthorColor(get, set);
+  },
+
+  /**
+   * Clears the current project back to the empty state, deleting it (audio, annotations,
+   * replies) from storage rather than just unlinking it — otherwise `init()` would
+   * resurrect it as the "latest" project on the next page load. Identity fields
+   * (displayName/authorId/authorColor) are left untouched, matching `loadAudioFile`.
+   */
+  async newProject() {
+    const { project, objectUrl } = get();
+    if (objectUrl) audioService.revoke(objectUrl);
+    set({
+      status: 'idle',
+      error: null,
+      notice: null,
+      project: null,
+      audio: null,
+      objectUrl: null,
+      annotations: [],
+      repliesByAnnotation: {},
+    });
+    if (project) await storage.deleteProject(project.id);
   },
 
   clearError() {

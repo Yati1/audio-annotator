@@ -35,6 +35,10 @@ export class AppPage {
     return this.page.getByRole('alert');
   }
 
+  emptyState() {
+    return this.page.getByText('Open an audio file or import a bundle to begin annotating.');
+  }
+
   /** Submits the display-name prompt if it's shown. React hasn't necessarily mounted it
    *  yet right after page.goto(), so this waits briefly rather than checking instantaneously. */
   async ensureSession(displayName = 'Ava'): Promise<void> {
@@ -58,5 +62,14 @@ export class AppPage {
   /** Auto-accepts the next native confirm() dialog (used by delete flows). */
   acceptNextConfirm(): void {
     this.page.once('dialog', (d) => void d.accept());
+  }
+
+  /** Auto-dismisses the next native confirm() dialog. */
+  dismissNextConfirm(): void {
+    this.page.once('dialog', (d) => void d.dismiss());
+  }
+
+  newProjectButton() {
+    return this.page.getByTestId('new-project-button');
   }
 }
