@@ -29,3 +29,11 @@ test.describe('new project', () => {
     await expect(app.annotations.itemByNote('Keep me?').locator()).toBeVisible();
   });
 });
+
+test.describe('new project button state', () => {
+  test('is disabled when no project is loaded', async ({ app }) => {
+    await app.ensureSession('Ava');
+
+    await expect(app.newProjectButton()).toBeDisabled();
+  });
+});

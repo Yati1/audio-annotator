@@ -178,7 +178,7 @@ export function App(): ReactNode {
           <button
             type="button"
             onClick={onNewProject}
-            disabled={!hasProject}
+            disabled={!hasProject || status === 'loading'}
             data-testid="new-project-button"
           >
             New Project
