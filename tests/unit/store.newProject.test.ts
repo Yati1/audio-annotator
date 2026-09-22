@@ -114,6 +114,32 @@ describe('store: newProject', () => {
     expect(await storage.listReplies(point.value.id)).toEqual([]);
   });
 
+  it('nulls the project synchronously and stays loading until deletion completes', async () => {
+    await storage.putProject(makeProject());
+    await storage.putAudio(makeAudioRecord());
+
+    const promise = useStore.getState().newProject();
+
+    // Before the delete has resolved: the write-guard is already up, but the UI
+    // must not yet claim the reset succeeded (a reload here would still restore
+    // the project from storage, since the delete hasn't landed).
+    expect(useStore.getState().project).toBeNull();
+    expect(useStore.getState().status).toBe('loading');
+
+    // A write already in flight at this point must see the project gone and bail,
+    // rather than writing into a project that's concurrently being deleted.
+    const id = await useStore.getState().addPoint(1, 'sneaky');
+    expect(id).toBeNull();
+
+    await promise;
+
+    const state = useStore.getState();
+    expect(state.status).toBe('idle');
+    expect(state.audio).toBeNull();
+    expect(await storage.getProject(projectId)).toBeUndefined();
+    expect(await storage.listAnnotations(projectId)).toEqual([]);
+  });
+
   it('is a safe no-op when there is no current project', async () => {
     useStore.setState({ project: null, audio: null });
 

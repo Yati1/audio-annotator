@@ -161,21 +161,27 @@ export const useStore = create<AppState>((set, get) => ({
    * replies) from storage rather than just unlinking it — otherwise `init()` would
    * resurrect it as the "latest" project on the next page load. Identity fields
    * (displayName/authorId/authorColor) are left untouched, matching `loadAudioFile`.
+   *
+   * `project` is nulled out synchronously (before the delete) so any annotation/reply
+   * write already in flight sees it gone and bails rather than writing into a project
+   * that's concurrently being deleted. Status stays 'loading' — not 'idle' — until the
+   * delete resolves, so the UI never claims the reset succeeded (and a reload could
+   * still restore the project) before it actually has; the object URL is revoked only
+   * once the delete has succeeded, so a failed delete doesn't leave a dead blob URL
+   * referenced by `audio`/`objectUrl`.
    */
   async newProject() {
     const { project, objectUrl } = get();
+    set({ status: project ? 'loading' : 'idle', error: null, notice: null, project: null });
+    if (project) await storage.deleteProject(project.id);
     if (objectUrl) audioService.revoke(objectUrl);
     set({
       status: 'idle',
-      error: null,
-      notice: null,
-      project: null,
       audio: null,
       objectUrl: null,
       annotations: [],
       repliesByAnnotation: {},
     });
-    if (project) await storage.deleteProject(project.id);
   },
 
   clearError() {
