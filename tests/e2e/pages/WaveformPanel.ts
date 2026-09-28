@@ -116,6 +116,28 @@ export class WaveformPanel {
     await this.page.mouse.up({ button: 'left' });
   }
 
+  /** The region or point marker drawn for the given annotation id. */
+  region(id: string): Locator {
+    return this.canvas().locator(`[part~="anno-${id}"]`);
+  }
+
+  /** A region's right-hand resize handle. Only present while the region can be resized. */
+  rightHandle(id: string): Locator {
+    return this.region(id).locator('[part~="region-handle-right"]');
+  }
+
+  /** Presses the left button on `target` and drags it to a fractional canvas position. */
+  async dragTo(target: Locator, toFraction: number): Promise<void> {
+    const from = await target.boundingBox();
+    const box = await this.canvas().boundingBox();
+    if (!from || !box) throw new Error('drag target or waveform canvas not visible');
+    const y = from.y + from.height / 2;
+    await this.page.mouse.move(from.x + from.width / 2, y);
+    await this.page.mouse.down();
+    await this.page.mouse.move(box.x + box.width * toFraction, y, { steps: 10 });
+    await this.page.mouse.up();
+  }
+
   /** Resets zoom and pan to the default fit-to-width view. */
   async resetView(): Promise<void> {
     await this.canvas().dblclick();
