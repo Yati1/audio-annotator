@@ -43,7 +43,7 @@ export interface AppState {
   clearError(): void;
   clearNotice(): void;
 
-  // annotations (US1)
+  // annotations (US1). Edit and delete act only on this device's own items (FR-015).
   addPoint(startSec: number, note: string): Promise<string | null>;
   addRegion(startSec: number, endSec: number, note: string): Promise<string | null>;
   editAnnotation(
@@ -248,9 +248,9 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   async editAnnotation(id, patch) {
-    const { annotations, audio } = get();
+    const { annotations, audio, authorId } = get();
     const current = annotations.find((a) => a.id === id);
-    if (!current || !audio) return;
+    if (!current || !audio || current.authorId !== authorId) return;
     const res = annotationService.edit(current, patch, audio.durationSec);
     if (isErr(res)) {
       set({ error: res.error.message });
@@ -260,9 +260,9 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   async deleteAnnotation(id) {
-    const { annotations } = get();
+    const { annotations, authorId } = get();
     const current = annotations.find((a) => a.id === id);
-    if (!current) return;
+    if (!current || current.authorId !== authorId) return;
     const tombstoned = annotationService.remove(current);
     await persistAnnotation(get, set, tombstoned);
   },
@@ -287,7 +287,7 @@ export const useStore = create<AppState>((set, get) => ({
   async editReply(annotationId, replyId, text) {
     const list = get().repliesByAnnotation[annotationId] ?? [];
     const current = list.find((r) => r.id === replyId);
-    if (!current) return;
+    if (!current || current.authorId !== get().authorId) return;
     const res = replyService.edit(current, text);
     if (isErr(res)) {
       set({ error: res.error.message });
@@ -299,7 +299,7 @@ export const useStore = create<AppState>((set, get) => ({
   async deleteReply(annotationId, replyId) {
     const list = get().repliesByAnnotation[annotationId] ?? [];
     const current = list.find((r) => r.id === replyId);
-    if (!current) return;
+    if (!current || current.authorId !== get().authorId) return;
     await persistReply(get, set, replyService.remove(current));
   },
 
