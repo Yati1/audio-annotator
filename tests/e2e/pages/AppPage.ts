@@ -59,14 +59,24 @@ export class AppPage {
     await this.waveform.waitUntilReady();
   }
 
-  /** Auto-accepts the next native confirm() dialog (used by delete flows). */
-  acceptNextConfirm(): void {
-    this.page.once('dialog', (d) => void d.accept());
+  /** Auto-accepts the next native confirm() dialog; resolves with its message. */
+  acceptNextConfirm(): Promise<string> {
+    return new Promise((resolve) => {
+      this.page.once('dialog', (d) => {
+        resolve(d.message());
+        void d.accept();
+      });
+    });
   }
 
-  /** Auto-dismisses the next native confirm() dialog. */
-  dismissNextConfirm(): void {
-    this.page.once('dialog', (d) => void d.dismiss());
+  /** Auto-dismisses the next native confirm() dialog; resolves with its message. */
+  dismissNextConfirm(): Promise<string> {
+    return new Promise((resolve) => {
+      this.page.once('dialog', (d) => {
+        resolve(d.message());
+        void d.dismiss();
+      });
+    });
   }
 
   newProjectButton() {
