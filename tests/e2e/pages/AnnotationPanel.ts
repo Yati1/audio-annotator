@@ -20,9 +20,11 @@ export class AnnotationPanel {
     return new AnnotationItemHandle(this.items().filter({ hasText: note }));
   }
 
-  /** Locates an annotation item by its stable id, which survives note edits. */
+  /** Locates an annotation item by its stable id, which survives note edits. Quotes the id
+   *  as a CSS string, since an imported bundle's id can hold selector-breaking characters. */
   itemById(id: string): AnnotationItemHandle {
-    return new AnnotationItemHandle(this.list().locator(`[data-annotation-id="${id}"]`));
+    const quoted = `"${id.replace(/[\\"]/g, '\\$&').replace(/\n/g, '\\a ')}"`;
+    return new AnnotationItemHandle(this.list().locator(`[data-annotation-id=${quoted}]`));
   }
 
   itemAt(index: number): AnnotationItemHandle {
@@ -82,6 +84,12 @@ export class AnnotationItemHandle {
   /** Clicks Delete. Arm a confirm handler on the page first (see AppPage). */
   async delete(): Promise<void> {
     await this.root.getByRole('button', { name: 'Delete annotation' }).click();
+  }
+
+  /** Opens the inline editor without changing anything; returns its textarea. */
+  async openEditor(): Promise<Locator> {
+    await this.root.getByRole('button', { name: 'Edit note' }).click();
+    return this.root.locator('.annotation-edit textarea');
   }
 
   async addReply(text: string): Promise<void> {

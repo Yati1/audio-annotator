@@ -33,6 +33,21 @@ test.describe('editing and deleting annotations', () => {
     await expect(item.note()).toHaveText('Original note');
   });
 
+  // Known bug: Cancel hides the editor but keeps the discarded text as its draft, so it
+  // comes back the next time the editor opens. Remove test.fail() once that is fixed.
+  test('reopening the editor after a cancel shows the saved note, not the discarded one', async ({
+    app,
+  }) => {
+    test.fail();
+    const id = await app.annotations.itemByNote('Original note').id();
+    if (!id) throw new Error('annotation has no id');
+    const item = app.annotations.itemById(id);
+    await item.editNoteAndCancel('Thrown away');
+
+    const editor = await item.openEditor();
+    await expect(editor).toHaveValue('Original note', { timeout: 2000 });
+  });
+
   test('deletes after confirmation, and stays deleted after reload (FR-009)', async ({ app }) => {
     const message = app.acceptNextConfirm();
     await app.annotations.itemByNote('Original note').delete();
