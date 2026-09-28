@@ -61,7 +61,7 @@ export interface AppState {
   setLoadedProject(full: FullProject, objectUrl: string): void;
   getCurrentFull(): FullProject | null;
   exportBundle(): Promise<Blob | null>;
-  importBundle(file: File): Promise<{ added: number; conflicts: number } | null>;
+  importBundle(file: File): Promise<{ added: number; updated: number } | null>;
 }
 
 const LARGE_FILE_BYTES = 150 * 1024 * 1024;
@@ -381,7 +381,7 @@ export const useStore = create<AppState>((set, get) => ({
     await ensureAuthorColor(get, set);
     return {
       added: outcome.added.annotations + outcome.added.replies,
-      conflicts: outcome.conflicts.length,
+      updated: outcome.updated.annotations + outcome.updated.replies,
     };
   },
 }));

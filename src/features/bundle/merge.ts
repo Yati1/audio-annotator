@@ -1,28 +1,54 @@
 /**
  * Pure merge logic for reconciling an incoming project with the local one (FR-027/FR-028).
- * Union by unique id; tombstones win to prevent resurrection; divergent same-id edits are
- * flagged as conflicts rather than silently overwritten.
+ * Union by unique id. For an id on both sides the newer `updatedAt` wins, and a tombstone
+ * on either side wins so deletions never resurrect. Only the author's device can edit an
+ * item (FR-015), so its versions form one line and the newer one is always the right one.
  */
-import type { Annotation, FullProject, Reply } from '../types';
+import type { FullProject } from '../types';
 
 export interface MergeOutcome {
   project: FullProject;
   added: { annotations: number; replies: number };
-  conflicts: Array<{ kind: 'annotation' | 'reply'; id: string }>;
+  /** Items that existed locally and were replaced by a newer or deleted incoming version. */
+  updated: { annotations: number; replies: number };
 }
 
-function annotationsEqual(a: Annotation, b: Annotation): boolean {
-  return (
-    a.kind === b.kind &&
-    a.startSec === b.startSec &&
-    a.endSec === b.endSec &&
-    a.note === b.note &&
-    !!a.deleted === !!b.deleted
-  );
+interface Mergeable {
+  id: string;
+  updatedAt: string;
+  deleted?: boolean;
 }
 
-function repliesEqual(a: Reply, b: Reply): boolean {
-  return a.text === b.text && !!a.deleted === !!b.deleted;
+/** Picks the version of one item to keep, and whether it differs from the local one. */
+function mergeItem<T extends Mergeable>(local: T, incoming: T): { item: T; changed: boolean } {
+  // Equal timestamps keep local: they can only differ in content if a bundle was hand-edited.
+  const newer = incoming.updatedAt > local.updatedAt ? incoming : local;
+  if (local.deleted || incoming.deleted) {
+    return { item: { ...newer, deleted: true }, changed: !local.deleted || newer !== local };
+  }
+  return { item: newer, changed: newer !== local };
+}
+
+function mergeById<T extends Mergeable>(
+  local: T[],
+  incoming: T[],
+): { items: T[]; added: number; updated: number } {
+  const byId = new Map<string, T>();
+  for (const item of local) byId.set(item.id, item);
+  let added = 0;
+  let updated = 0;
+  for (const inc of incoming) {
+    const existing = byId.get(inc.id);
+    if (!existing) {
+      byId.set(inc.id, inc);
+      added++;
+      continue;
+    }
+    const { item, changed } = mergeItem(existing, inc);
+    byId.set(inc.id, item);
+    if (changed) updated++;
+  }
+  return { items: [...byId.values()], added, updated };
 }
 
 /**
@@ -34,57 +60,21 @@ export function merge(local: FullProject | null, incoming: FullProject): MergeOu
     return {
       project: incoming,
       added: { annotations: incoming.annotations.length, replies: incoming.replies.length },
-      conflicts: [],
+      updated: { annotations: 0, replies: 0 },
     };
   }
 
-  const conflicts: MergeOutcome['conflicts'] = [];
-  let addedA = 0;
-  let addedR = 0;
-
-  // Annotations
-  const annoById = new Map<string, Annotation>();
-  for (const a of local.annotations) annoById.set(a.id, a);
-  for (const inc of incoming.annotations) {
-    const existing = annoById.get(inc.id);
-    if (!existing) {
-      annoById.set(inc.id, inc);
-      addedA++;
-      continue;
-    }
-    if (existing.deleted || inc.deleted) {
-      annoById.set(inc.id, { ...existing, deleted: true });
-    } else if (!annotationsEqual(existing, inc)) {
-      conflicts.push({ kind: 'annotation', id: inc.id });
-      // keep local; do not overwrite
-    }
-  }
-
-  // Replies
-  const replyById = new Map<string, Reply>();
-  for (const r of local.replies) replyById.set(r.id, r);
-  for (const inc of incoming.replies) {
-    const existing = replyById.get(inc.id);
-    if (!existing) {
-      replyById.set(inc.id, inc);
-      addedR++;
-      continue;
-    }
-    if (existing.deleted || inc.deleted) {
-      replyById.set(inc.id, { ...existing, deleted: true });
-    } else if (!repliesEqual(existing, inc)) {
-      conflicts.push({ kind: 'reply', id: inc.id });
-    }
-  }
+  const annotations = mergeById(local.annotations, incoming.annotations);
+  const replies = mergeById(local.replies, incoming.replies);
 
   return {
     project: {
       project: { ...local.project, updatedAt: new Date().toISOString() },
       audio: local.audio,
-      annotations: [...annoById.values()],
-      replies: [...replyById.values()],
+      annotations: annotations.items,
+      replies: replies.items,
     },
-    added: { annotations: addedA, replies: addedR },
-    conflicts,
+    added: { annotations: annotations.added, replies: replies.added },
+    updated: { annotations: annotations.updated, replies: replies.updated },
   };
 }

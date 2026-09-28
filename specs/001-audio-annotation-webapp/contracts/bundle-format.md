@@ -114,8 +114,10 @@ then `id`) so identical projects produce byte-comparable JSON (testability, Cons
 3. Resolve the audio blob from the `audio/` entry.
 4. If `project.id` is new ⇒ create project (open as project). If it already exists locally
    ⇒ merge annotations/replies by `id` (union, tombstone-aware) with no data loss
-   (FR-027/FR-028).
-5. Report a summary: added / merged / conflicts flagged.
+   (FR-027/FR-028). For an `id` on both sides, the newer `updatedAt` wins and a tombstone
+   on either side wins. Only the author's device can edit an item (FR-015), so the older
+   copy is always a superseded version, not a rival edit.
+5. Report a summary: new items added, existing items updated.
 
 ## Validation error taxonomy (surfaced as explicit error states, FR-022/FR-026)
 
