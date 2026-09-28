@@ -60,7 +60,12 @@ export interface AppState {
   // used by import (US3)
   setLoadedProject(full: FullProject, objectUrl: string): void;
   exportBundle(): Promise<Blob | null>;
-  importBundle(file: File): Promise<{ added: number; updated: number } | null>;
+  /** `confirmReplace` is asked, with the open project's title, before a bundle for a
+   *  different project replaces it; returning false cancels the import (FR-023). */
+  importBundle(
+    file: File,
+    confirmReplace?: (currentTitle: string) => boolean,
+  ): Promise<{ added: number; updated: number } | null>;
 }
 
 const LARGE_FILE_BYTES = 150 * 1024 * 1024;
@@ -332,7 +337,7 @@ export const useStore = create<AppState>((set, get) => ({
     return exportBundle(full, bytes);
   },
 
-  async importBundle(file) {
+  async importBundle(file, confirmReplace) {
     set({ status: 'loading', error: null, notice: null });
     let bytes: Uint8Array;
     try {
@@ -351,6 +356,16 @@ export const useStore = create<AppState>((set, get) => ({
     const { full: incoming, audioBlob } = parsed.result;
     const current = await loadOpenProject(get);
     const sameOriginal = current?.project.id === incoming.project.id ? current : null;
+    if (current && !sameOriginal) {
+      if (confirmReplace && !confirmReplace(current.project.title)) {
+        set({ status: 'ready' });
+        return null;
+      }
+      // Replacing, not merging: delete the old project so it can't linger unseen in
+      // storage. Null it first, as newProject does, so in-flight writes bail.
+      set({ project: null });
+      await storage.deleteProject(current.project.id);
+    }
     const outcome = merge(sameOriginal, incoming);
 
     // Persist audio, project, and merged records.

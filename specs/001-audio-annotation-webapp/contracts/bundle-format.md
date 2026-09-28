@@ -114,7 +114,9 @@ then `id`) so identical projects produce byte-comparable JSON (testability, Cons
    must parse as a date; import rewrites them in UTC (`toISOString`) so they compare
    correctly as strings.
 3. Resolve the audio blob from the `audio/` entry.
-4. If `project.id` is new ⇒ create project (open as project). If it already exists locally
+4. If `project.id` is new ⇒ create project (open as project). If a different project is
+   open, first warn that it will be replaced and deleted from this browser (FR-023); on
+   cancel, change nothing; on accept, delete it before opening the bundle. If it already exists locally
    ⇒ merge annotations/replies by `id` (union, tombstone-aware) with no data loss
    (FR-027/FR-028). For an `id` on both sides, the newer `updatedAt` wins and a tombstone
    on either side wins. Only the author's device can edit an item (FR-015), so the older
