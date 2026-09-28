@@ -92,6 +92,14 @@ export class AnnotationItemHandle {
     return this.root.getByLabel('End (s)');
   }
 
+  /** Reads the exact start time from the inline editor, then closes it. */
+  async startSec(): Promise<number> {
+    await this.editButton().click();
+    const value = Number(await this.startField().inputValue());
+    await this.root.locator('.annotation-edit').getByRole('button', { name: 'Cancel' }).click();
+    return value;
+  }
+
   /** Opens the inline editor, sets the time fields given, and clicks Save. */
   async editBounds(bounds: { start?: number; end?: number }): Promise<void> {
     await this.editButton().click();
