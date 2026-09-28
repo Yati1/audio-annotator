@@ -83,6 +83,23 @@ export class AnnotationItemHandle {
     await this.root.locator('.annotation-edit').getByRole('button', { name: 'Save' }).click();
   }
 
+  /** The inline editor's start (or point time) field. */
+  startField(): Locator {
+    return this.root.getByLabel(/^(Start|Time) \(s\)$/);
+  }
+
+  endField(): Locator {
+    return this.root.getByLabel('End (s)');
+  }
+
+  /** Opens the inline editor, sets the time fields given, and clicks Save. */
+  async editBounds(bounds: { start?: number; end?: number }): Promise<void> {
+    await this.editButton().click();
+    if (bounds.start !== undefined) await this.startField().fill(String(bounds.start));
+    if (bounds.end !== undefined) await this.endField().fill(String(bounds.end));
+    await this.root.locator('.annotation-edit').getByRole('button', { name: 'Save' }).click();
+  }
+
   /** Opens the inline editor, types a note, then cancels. */
   async editNoteAndCancel(note: string): Promise<void> {
     await this.root.getByRole('button', { name: 'Edit note' }).click();

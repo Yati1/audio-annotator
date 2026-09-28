@@ -33,12 +33,9 @@ test.describe('editing and deleting annotations', () => {
     await expect(item.note()).toHaveText('Original note');
   });
 
-  // Known bug: Cancel hides the editor but keeps the discarded text as its draft, so it
-  // comes back the next time the editor opens. Remove test.fail() once that is fixed.
   test('reopening the editor after a cancel shows the saved note, not the discarded one', async ({
     app,
   }) => {
-    test.fail();
     const id = await app.annotations.itemByNote('Original note').id();
     if (!id) throw new Error('annotation has no id');
     const item = app.annotations.itemById(id);
@@ -81,6 +78,32 @@ test.describe('editing and deleting annotations', () => {
     await item.delete();
 
     expect(await message).toBe('Delete this annotation and its 2 replies? This cannot be undone.');
+  });
+
+  test("moves a point's time, and the move persists across reload (FR-008)", async ({ app }) => {
+    const item = app.annotations.itemByNote('Original note');
+    await item.editBounds({ start: 3 });
+    await expect(item.badge()).toContainText('0:03');
+
+    await app.page.reload();
+    await app.waveform.waitUntilReady();
+    await expect(app.annotations.itemByNote('Original note').badge()).toContainText('0:03');
+  });
+
+  test("changes a region's bounds, and the change persists across reload (FR-008)", async ({
+    app,
+  }) => {
+    await app.transport.startRegion();
+    await app.draftDialog.createWithNote('A region');
+    const item = app.annotations.itemByNote('A region');
+
+    await item.editBounds({ start: 1, end: 3 });
+    await expect(item.badge()).toContainText('0:01–0:03');
+    await expect(app.errorAlert).toHaveCount(0);
+
+    await app.page.reload();
+    await app.waveform.waitUntilReady();
+    await expect(app.annotations.itemByNote('A region').badge()).toContainText('0:01–0:03');
   });
 });
 
