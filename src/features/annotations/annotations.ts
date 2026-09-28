@@ -60,6 +60,23 @@ export function validate(a: Annotation, durationSec: number): Result<Annotation,
   return ok(a);
 }
 
+/** Length of a region created from the playhead with `r` or "+ Region". */
+export const DEFAULT_REGION_SEC = 5;
+
+/**
+ * Bounds for a region started at the playhead: `DEFAULT_REGION_SEC` long, cut short by
+ * the end of the track. With the playhead at the very end that would leave no length, so
+ * the region covers the track's last `DEFAULT_REGION_SEC` instead.
+ */
+export function regionFromPlayhead(
+  playheadSec: number,
+  durationSec: number,
+): { startSec: number; endSec: number } {
+  const endSec = Math.min(playheadSec + DEFAULT_REGION_SEC, durationSec);
+  if (endSec > playheadSec) return { startSec: playheadSec, endSec };
+  return { startSec: Math.max(0, endSec - DEFAULT_REGION_SEC), endSec };
+}
+
 export interface AnnotationService {
   createPoint(input: CreatePointInput, durationSec: number): Result<Annotation, ValidationError>;
   createRegion(input: CreateRegionInput, durationSec: number): Result<Annotation, ValidationError>;

@@ -62,6 +62,20 @@ test.describe('annotate', () => {
     await expect(app.waveform.canvas().locator('[part~="draft-region"]')).not.toBeVisible();
   });
 
+  test('r at the very end of the track still makes a region with a length', async ({ app }) => {
+    await app.openAudioFixture(makeWavFile({ name: 'clip-short.wav', durationSec: 1 }));
+    // Playing to the end puts the playhead exactly there; a click near the edge would not.
+    await app.page.keyboard.press('Space');
+    await expect.poll(() => app.transport.isPlaying()).toBe(true);
+    await expect.poll(() => app.transport.isPlaying(), { timeout: 10_000 }).toBe(false);
+
+    await app.page.keyboard.press('r');
+    await app.draftDialog.createWithNote('End of track');
+
+    await expect(app.errorAlert).toHaveCount(0);
+    await expect(app.annotations.itemByNote('End of track').badge()).toContainText('0:00–0:01');
+  });
+
   test('region playback stops at the end of the region (FR-003)', async ({ app }) => {
     // Fixture is 4s; + Region at playhead 0 creates a start=0..end=min(0+5,4)=4 region.
     await app.transport.startRegion();

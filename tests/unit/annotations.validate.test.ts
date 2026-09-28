@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { annotationService } from '../../src/features/annotations/annotations';
+import { annotationService, regionFromPlayhead } from '../../src/features/annotations/annotations';
 
 const base = {
   projectId: 'p1',
@@ -66,5 +66,34 @@ describe('annotation validation', () => {
       expect(edited.ok).toBe(true);
       if (edited.ok) expect(edited.value.note).toBe('updated');
     }
+  });
+});
+
+describe('regionFromPlayhead', () => {
+  it('runs five seconds from the playhead', () => {
+    expect(regionFromPlayhead(10, 120)).toEqual({ startSec: 10, endSec: 15 });
+  });
+
+  it('is cut short by the end of the track', () => {
+    expect(regionFromPlayhead(118, 120)).toEqual({ startSec: 118, endSec: 120 });
+  });
+
+  it('covers the last five seconds when the playhead is at the very end', () => {
+    expect(regionFromPlayhead(120, 120)).toEqual({ startSec: 115, endSec: 120 });
+  });
+
+  it('covers the whole track when it is shorter than five seconds', () => {
+    expect(regionFromPlayhead(1, 1)).toEqual({ startSec: 0, endSec: 1 });
+  });
+});
+
+describe('editing bounds', () => {
+  it('moves a region and rejects an end at or before its start', () => {
+    const r = annotationService.createRegion({ ...base, startSec: 10, endSec: 20 }, 120);
+    if (!r.ok) throw new Error('setup failed');
+    const moved = annotationService.edit(r.value, { startSec: 30, endSec: 40 }, 120);
+    expect(moved.ok && moved.value.startSec).toBe(30);
+    const inverted = annotationService.edit(r.value, { endSec: 5 }, 120);
+    expect(inverted.ok).toBe(false);
   });
 });
