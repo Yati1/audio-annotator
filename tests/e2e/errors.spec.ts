@@ -94,8 +94,13 @@ test.describe('errors', () => {
     await expect(app.annotations.itemByNote('Existing annotation').locator()).toBeVisible();
   });
 
-  test('shows an error for an audio file the browser cannot decode', async ({ app }) => {
+  test('shows an error for an audio file the browser cannot decode, and keeps the open project', async ({
+    app,
+  }) => {
     await app.ensureSession('Ava');
+    await app.openAudioFixture(makeWavFile({ durationSec: 2 }));
+    await app.transport.addPoint();
+    await app.draftDialog.createWithNote('Existing annotation');
 
     // The .wav name passes the format check; only decoding can catch the bad bytes.
     await app.page.getByTestId('open-audio-input').setInputFiles({
@@ -105,7 +110,11 @@ test.describe('errors', () => {
     });
 
     await expect(app.errorAlert).toContainText('Could not read this audio file.');
-    await expect(app.waveform.canvas()).not.toBeVisible();
+    await expect(app.annotations.itemByNote('Existing annotation').locator()).toBeVisible();
+
+    await app.page.reload();
+    await app.waveform.waitUntilReady();
+    await expect(app.annotations.itemByNote('Existing annotation').locator()).toBeVisible();
   });
 
   test('dismisses the error banner', async ({ app }) => {
