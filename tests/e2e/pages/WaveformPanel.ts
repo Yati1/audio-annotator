@@ -61,6 +61,26 @@ export class WaveformPanel {
     return scrollWidth > clientWidth;
   }
 
+  /** Waits until wavesurfer has redrawn the waveform to exactly fill its container, e.g.
+   *  after a viewport resize. Its ResizeObserver redraws on a debounce, and until then the
+   *  old canvases keep their old pixel width. */
+  async waitForFitToWidth(): Promise<void> {
+    await expect
+      .poll(() =>
+        this.canvas().evaluate((el) => {
+          const host = el.firstElementChild as (HTMLElement & { shadowRoot: ShadowRoot }) | null;
+          const sc = host?.shadowRoot?.querySelector('.scroll') as HTMLElement | undefined;
+          const canvases = sc
+            ? [...sc.querySelectorAll<HTMLCanvasElement>('.canvases canvas')]
+            : [];
+          if (!sc || canvases.length === 0) return Infinity;
+          const drawnWidth = Math.max(...canvases.map((c) => c.offsetLeft + c.offsetWidth));
+          return Math.abs(drawnWidth - sc.clientWidth);
+        }),
+      )
+      .toBeLessThanOrEqual(2);
+  }
+
   async scrollLeft(): Promise<number> {
     return (await this.scrollContainer()).scrollLeft;
   }
