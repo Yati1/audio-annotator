@@ -8,6 +8,7 @@ describe('reply service', () => {
       annotationId: 'a1',
       text: 'hello',
       authorName: 'Sam',
+      authorId: 'device-sam',
       authorColor: '#3987e5',
     });
     expect(r.ok).toBe(true);
@@ -18,6 +19,7 @@ describe('reply service', () => {
       annotationId: 'a1',
       text: '  ',
       authorName: 'Sam',
+      authorId: 'device-sam',
       authorColor: '#3987e5',
     });
     expect(r.ok).toBe(false);
@@ -28,6 +30,7 @@ describe('reply service', () => {
       annotationId: 'a1',
       text: 'x',
       authorName: 'Sam',
+      authorId: 'device-sam',
       authorColor: '#3987e5',
     });
     if (!r.ok) throw new Error('failed');
@@ -41,12 +44,14 @@ describe('reply service', () => {
       annotationId: 'a1',
       text: 'first',
       authorName: 'A',
+      authorId: 'device-a',
       authorColor: '#3987e5',
     });
     const r2 = replyService.add({
       annotationId: 'a1',
       text: 'second',
       authorName: 'B',
+      authorId: 'device-b',
       authorColor: '#d95926',
     });
     if (!r1.ok || !r2.ok) throw new Error('failed');
@@ -69,12 +74,14 @@ describe('reply persistence', () => {
       annotationId: 'a1',
       text: 'first',
       authorName: 'A',
+      authorId: 'device-a',
       authorColor: '#3987e5',
     });
     const r2 = replyService.add({
       annotationId: 'a1',
       text: 'second',
       authorName: 'B',
+      authorId: 'device-b',
       authorColor: '#d95926',
     });
     if (!r1.ok || !r2.ok) throw new Error('failed');

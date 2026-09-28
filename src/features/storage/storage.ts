@@ -34,7 +34,8 @@ interface AnnotatorDB extends DBSchema {
 }
 
 const DB_NAME = 'audio-annotator';
-const DB_VERSION = 1;
+/** 2: records must carry `authorId`. Upgrading from 1 wipes stored projects (see below). */
+const DB_VERSION = 2;
 
 let currentDbName = DB_NAME;
 let dbPromise: Promise<IDBPDatabase<AnnotatorDB>> | null = null;
@@ -42,7 +43,16 @@ let dbPromise: Promise<IDBPDatabase<AnnotatorDB>> | null = null;
 function getDb(): Promise<IDBPDatabase<AnnotatorDB>> {
   if (!dbPromise) {
     dbPromise = openDB<AnnotatorDB>(currentDbName, DB_VERSION, {
-      upgrade(db) {
+      upgrade(db, oldVersion, _newVersion, tx) {
+        if (oldVersion >= 1) {
+          // Version 1 records may lack `authorId`, which is now required, so drop every
+          // stored project. Session values (name, authorId, color) are kept.
+          void tx.objectStore('projects').clear();
+          void tx.objectStore('audio').clear();
+          void tx.objectStore('annotations').clear();
+          void tx.objectStore('replies').clear();
+          return;
+        }
         const projects = db.createObjectStore('projects', { keyPath: 'id' });
         projects.createIndex('updatedAt', 'updatedAt');
 
@@ -176,9 +186,11 @@ export const storage: StoragePort = {
   },
 };
 
-/** Test-only: reset the cached DB handle so a fresh fake-indexeddb can be used. */
+/** Test-only: reset the cached DB handle so a fresh fake-indexeddb can be used. Returns
+ *  the new database name. */
 let _testDbCounter = 0;
-export function _resetDbForTests(): void {
+export function _resetDbForTests(): string {
   dbPromise = null;
   currentDbName = `${DB_NAME}-test-${++_testDbCounter}`;
+  return currentDbName;
 }

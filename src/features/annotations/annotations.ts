@@ -22,7 +22,7 @@ export interface CreatePointInput {
   note: string;
   authorName: string;
   authorColor: string;
-  authorId?: string;
+  authorId: string;
 }
 
 export interface CreateRegionInput extends CreatePointInput {

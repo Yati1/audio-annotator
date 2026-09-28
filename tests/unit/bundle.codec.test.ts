@@ -32,6 +32,7 @@ function makeProject(): FullProject {
         endSec: 20,
         note: 'Background noise',
         authorName: 'Sam',
+        authorId: 'device-sam',
         authorColor: '#3987e5',
         createdAt: now,
         updatedAt: now,
@@ -44,6 +45,7 @@ function makeProject(): FullProject {
         annotationId: 'an-1',
         text: 'Agreed',
         authorName: 'Jo',
+        authorId: 'device-jo',
         authorColor: '#d95926',
         createdAt: now,
         updatedAt: now,
@@ -77,6 +79,8 @@ describe('bundle codec', () => {
     expect(restored.replies[0].text).toBe('Agreed');
     expect(restored.annotations[0].authorColor).toBe('#3987e5');
     expect(restored.replies[0].authorColor).toBe('#d95926');
+    expect(restored.annotations[0].authorId).toBe('device-sam');
+    expect(restored.replies[0].authorId).toBe('device-jo');
   });
 
   it('falls back to a default color when a bundle carries an invalid authorColor', async () => {

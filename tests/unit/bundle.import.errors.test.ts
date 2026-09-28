@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseBundle } from '../../src/features/bundle/bundle';
-import { exportBundle } from '../../src/features/bundle/bundle';
+import { buildManifest, exportBundle } from '../../src/features/bundle/bundle';
 import type { FullProject } from '../../src/features/types';
 import { SCHEMA_VERSION } from '../../src/features/types';
 import { nowIso } from '../../src/lib/time';
@@ -84,6 +84,63 @@ describe('bundle import errors', () => {
     const r = parseBundle(new Uint8Array(zip.buffer));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.code).toBe('E_VERSION');
+  });
+
+  it('E_VERSION: older schemaVersion is rejected, not upgraded', async () => {
+    const manifest = { ...buildManifest(baseProject()), schemaVersion: SCHEMA_VERSION - 1 };
+    const zip = zipSync({
+      'annotations.json': strToU8(JSON.stringify(manifest)),
+      'audio/test.mp3': audioBytes,
+    });
+    const r = parseBundle(zip);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error.code).toBe('E_VERSION');
+      expect(r.error.message).toContain('older app version');
+    }
+  });
+
+  it('E_SCHEMA: an annotation or reply without an authorId', async () => {
+    const full = baseProject();
+    const now = nowIso();
+    full.annotations.push({
+      id: 'an-1',
+      projectId: 'p1',
+      kind: 'point',
+      startSec: 1,
+      endSec: null,
+      note: 'n',
+      authorName: 'Sam',
+      authorColor: '#3987e5',
+      authorId: 'device-sam',
+      createdAt: now,
+      updatedAt: now,
+    });
+    full.replies.push({
+      id: 'rp-1',
+      annotationId: 'an-1',
+      text: 't',
+      authorName: 'Jo',
+      authorColor: '#d95926',
+      authorId: 'device-jo',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const noAnnotationAuthor = buildManifest(full);
+    delete (noAnnotationAuthor.annotations[0] as { authorId?: string }).authorId;
+    const noReplyAuthor = buildManifest(full);
+    delete (noReplyAuthor.annotations[0].replies[0] as { authorId?: string }).authorId;
+
+    for (const manifest of [noAnnotationAuthor, noReplyAuthor]) {
+      const zip = zipSync({
+        'annotations.json': strToU8(JSON.stringify(manifest)),
+        'audio/test.mp3': audioBytes,
+      });
+      const r = parseBundle(zip);
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.code).toBe('E_SCHEMA');
+    }
   });
 
   it('E_NO_AUDIO: zip missing audio entry', async () => {

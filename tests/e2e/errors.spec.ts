@@ -4,6 +4,7 @@ import {
   makeFullProject,
   buildBundleMissingAudio,
   buildBundleWithNewerSchema,
+  buildBundleWithOlderSchema,
   corruptZipBytes,
 } from './fixtures/bundle';
 
@@ -71,6 +72,21 @@ test.describe('errors', () => {
     });
 
     await expect(app.errorAlert).toContainText('newer app version');
+  });
+
+  test('shows an error for a bundle with an older schema version', async ({ app }) => {
+    await app.ensureSession('Ava');
+    const full = makeFullProject();
+    const audioBytes = makeWavFile({ durationSec: 2 }).buffer;
+
+    await app.importExport.importBundle({
+      name: 'older-schema.aaz',
+      mimeType: 'application/zip',
+      buffer: buildBundleWithOlderSchema(full, audioBytes),
+    });
+
+    await expect(app.errorAlert).toContainText('older app version');
+    await expect(app.emptyState()).toBeVisible();
   });
 
   test('rejects an unsupported audio format and keeps the open project (FR-030)', async ({
