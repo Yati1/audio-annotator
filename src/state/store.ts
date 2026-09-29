@@ -254,7 +254,14 @@ export const useStore = create<AppState>((set, get) => ({
   async editAnnotation(id, patch) {
     const { annotations, audio, authorId } = get();
     const current = annotations.find((a) => a.id === id);
-    if (!current || !audio || current.authorId !== authorId) return false;
+    if (!current || !audio) {
+      set({ error: 'This annotation no longer exists.' });
+      return false;
+    }
+    if (current.authorId !== authorId) {
+      set({ error: 'Only its author can edit this annotation.' });
+      return false;
+    }
     const res = annotationService.edit(current, patch, audio.durationSec);
     if (isErr(res)) {
       set({ error: res.error.message });
