@@ -83,6 +83,33 @@ describe('store: importing a different project over the open one (FR-023)', () =
     expect((await storage.listProjects()).map((p) => p.id)).toEqual(['p-new']);
   });
 
+  it('keeps the old project when saving the new one fails (FR-026)', async () => {
+    vi.spyOn(storage, 'putAnnotations').mockRejectedValueOnce(new Error('QuotaExceededError'));
+
+    const result = await useStore
+      .getState()
+      .importBundle(await bundleFile(makeFull('p-new', 'a-new', 'New project')), () => true);
+
+    expect(result).toBeNull();
+    expect(useStore.getState().status).toBe('ready');
+    expect(useStore.getState().error).toBe('Could not save the imported project.');
+    expect(useStore.getState().project?.id).toBe('p-open');
+    expect(await storage.getProject('p-open')).toBeDefined();
+    expect(await storage.listAnnotations('p-open')).toHaveLength(1);
+    // Nothing half-written is left for the next start to open.
+    expect((await storage.listProjects()).map((p) => p.id)).toEqual(['p-open']);
+  });
+
+  it('keeps shared audio when the replaced project used the same audio id', async () => {
+    const result = await useStore
+      .getState()
+      .importBundle(await bundleFile(makeFull('p-new', 'a-open', 'New project')), () => true);
+
+    expect(result).not.toBeNull();
+    expect(await storage.getProject('p-open')).toBeUndefined();
+    expect(await storage.getAudio('a-open')).toBeDefined();
+  });
+
   it('does not ask when the bundle is the same project', async () => {
     const confirmReplace = vi.fn(() => false);
 
