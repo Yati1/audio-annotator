@@ -60,12 +60,14 @@ export function App(): ReactNode {
   // Also reset playback state: WaveformView is torn down and rebuilt for the new url,
   // and neither the outgoing instance's teardown nor the incoming one's setup emits
   // onPlayState, so a mid-playback file switch would otherwise leave the transport
-  // stuck showing Pause with a stale playingAnnotationId.
+  // stuck showing Pause with a stale playingAnnotationId. Forget the old file's decoded
+  // duration too, so the metadata fallback applies until the new one decodes.
   useEffect(() => {
     setDraft(null);
     setDraftNote('');
     setPlaying(false);
     setPlayingAnnotationId(null);
+    setDuration(0);
   }, [objectUrl]);
 
   // Keyboard shortcuts for primary flows (FR-024).
