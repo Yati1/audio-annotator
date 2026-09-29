@@ -110,7 +110,9 @@ then `id`) so identical projects produce byte-comparable JSON (testability, Cons
    entry missing ⇒ return a validation error; **do not** mutate existing local data (FR-026).
 2. Validate `annotations.json` against the schema. Any `schemaVersion` other than the
    current one ⇒ clear "unsupported version" error (FR-026). Older bundles are not
-   upgraded: version 1 lacks the required `authorId`.
+   upgraded: version 1 lacks the required `authorId`. Every `createdAt` and `updatedAt`
+   must parse as a date; import rewrites them in UTC (`toISOString`) so they compare
+   correctly as strings.
 3. Resolve the audio blob from the `audio/` entry.
 4. If `project.id` is new ⇒ create project (open as project). If it already exists locally
    ⇒ merge annotations/replies by `id` (union, tombstone-aware) with no data loss
