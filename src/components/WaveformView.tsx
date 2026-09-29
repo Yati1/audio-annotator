@@ -193,8 +193,10 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
           revert();
           return;
         }
-        const endSec = a.kind === 'region' ? toMs(region.end) : null;
-        void cbRef.current.onAnnotationMoved(id, toMs(region.start), endSec).then((saved) => {
+        // Rounding can land just past the end of the track, which validation rejects.
+        const clamp = (sec: number) => Math.min(toMs(sec), ws.getDuration());
+        const endSec = a.kind === 'region' ? clamp(region.end) : null;
+        void cbRef.current.onAnnotationMoved(id, clamp(region.start), endSec).then((saved) => {
           if (!saved) revert();
         });
       });
@@ -261,12 +263,24 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
         panRef.current.lastX = e.clientX;
       };
 
+      // Scrolling stops as soon as either button comes up.
       function endPan() {
         if (!panRef.current) return;
         panRef.current = null;
         container.classList.remove('panning');
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', endPan);
+      }
+
+      // The gesture ends only when the last button comes up. Until then the regions plugin
+      // still tracks a drag begun by the left press, so its pointermoves stay blocked and
+      // the flag stays set: otherwise a move with one button still down would jump the
+      // region by the whole pan. `pointerup` fires only for that last button, and this
+      // window listener runs after the plugin's document one, so `region-updated` still
+      // sees the flag and snaps the region back.
+      function endGesture() {
+        window.removeEventListener('pointerup', endGesture);
+        window.removeEventListener('pointercancel', endGesture);
         window.removeEventListener('pointermove', stopPropagation, { capture: true });
         // The trailing click this gesture may produce (see `handleClick` below) is
         // dispatched synchronously by the browser before any timer callback runs, so
@@ -291,6 +305,8 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
         // The regions plugin tracks its drags with document-level pointermove listeners;
         // stopping pointermove at the window keeps a pan from also dragging a region.
         window.addEventListener('pointermove', stopPropagation, { capture: true });
+        window.addEventListener('pointerup', endGesture);
+        window.addEventListener('pointercancel', endGesture);
       };
 
       // A pan's left-button press/release still produces a native `click` on release
@@ -320,6 +336,8 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', endPan);
         window.removeEventListener('pointermove', stopPropagation, { capture: true });
+        window.removeEventListener('pointerup', endGesture);
+        window.removeEventListener('pointercancel', endGesture);
         container.classList.remove('panning');
         ws.destroy();
         wsRef.current = null;
