@@ -59,7 +59,6 @@ export interface AppState {
 
   // used by import (US3)
   setLoadedProject(full: FullProject, objectUrl: string): void;
-  getCurrentFull(): FullProject | null;
   exportBundle(): Promise<Blob | null>;
   importBundle(file: File): Promise<{ added: number; updated: number } | null>;
 }
@@ -321,15 +320,8 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
-  getCurrentFull() {
-    const { project, audio, annotations, repliesByAnnotation } = get();
-    if (!project || !audio) return null;
-    const replies = Object.values(repliesByAnnotation).flat();
-    return { project, audio, annotations, replies };
-  },
-
   async exportBundle() {
-    const full = get().getCurrentFull();
+    const full = await loadOpenProject(get);
     if (!full) return null;
     const blob = await storage.getAudioBlob(full.audio.id);
     if (!blob) {
@@ -357,7 +349,7 @@ export const useStore = create<AppState>((set, get) => ({
     }
 
     const { full: incoming, audioBlob } = parsed.result;
-    const current = get().getCurrentFull();
+    const current = await loadOpenProject(get);
     const sameOriginal = current?.project.id === incoming.project.id ? current : null;
     const outcome = merge(sameOriginal, incoming);
 
@@ -523,10 +515,26 @@ async function restoreLatestProject(): Promise<{ full: FullProject; objectUrl: s
   };
   const objectUrl = URL.createObjectURL(audioRecord.blob);
 
-  const annotations = await storage.listAnnotations(project.id);
-  const replyLists = await Promise.all(annotations.map((a) => storage.listReplies(a.id)));
+  return { full: { project, audio, ...(await loadRecords(project.id)) }, objectUrl };
+}
 
-  return { full: { project, audio, annotations, replies: replyLists.flat() }, objectUrl };
+/**
+ * The open project as stored, deleted annotations included. State drops those, but merge
+ * must see them so an older live copy can't bring one back, and export must carry them so
+ * collaborators learn of the delete.
+ */
+async function loadOpenProject(get: () => AppState): Promise<FullProject | null> {
+  const { project, audio } = get();
+  if (!project || !audio) return null;
+  return { project, audio, ...(await loadRecords(project.id)) };
+}
+
+async function loadRecords(
+  projectId: string,
+): Promise<Pick<FullProject, 'annotations' | 'replies'>> {
+  const annotations = await storage.listAnnotations(projectId);
+  const replyLists = await Promise.all(annotations.map((a) => storage.listReplies(a.id)));
+  return { annotations, replies: replyLists.flat() };
 }
 
 async function touchProject(
