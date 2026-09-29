@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { openDB } from 'idb';
-import { storage, _resetDbForTests } from '../../src/features/storage/storage';
+import { storage, _resetDbForTests, DB_BLOCKED_MESSAGE } from '../../src/features/storage/storage';
 import { nowIso } from '../../src/lib/time';
 import type { AudioRecord, Project } from '../../src/features/types';
 import { SCHEMA_VERSION } from '../../src/features/types';
@@ -126,25 +126,26 @@ describe('StoragePort', () => {
   });
 });
 
+/** Builds a version 1 database by hand, the way the old app left it. */
+function openV1(name: string) {
+  return openDB(name, 1, {
+    upgrade(db) {
+      db.createObjectStore('projects', { keyPath: 'id' }).createIndex('updatedAt', 'updatedAt');
+      db.createObjectStore('audio', { keyPath: 'id' });
+      db.createObjectStore('annotations', { keyPath: 'id' }).createIndex('projectId', 'projectId');
+      db.createObjectStore('replies', { keyPath: 'id' }).createIndex(
+        'annotationId',
+        'annotationId',
+      );
+      db.createObjectStore('sessionMeta', { keyPath: 'key' });
+    },
+  });
+}
+
 describe('StoragePort upgrade from version 1', () => {
   it('wipes stored projects but keeps session values', async () => {
     const name = _resetDbForTests();
-    // Build a version 1 database by hand, the way the old app left it.
-    const v1 = await openDB(name, 1, {
-      upgrade(db) {
-        db.createObjectStore('projects', { keyPath: 'id' }).createIndex('updatedAt', 'updatedAt');
-        db.createObjectStore('audio', { keyPath: 'id' });
-        db.createObjectStore('annotations', { keyPath: 'id' }).createIndex(
-          'projectId',
-          'projectId',
-        );
-        db.createObjectStore('replies', { keyPath: 'id' }).createIndex(
-          'annotationId',
-          'annotationId',
-        );
-        db.createObjectStore('sessionMeta', { keyPath: 'key' });
-      },
-    });
+    const v1 = await openV1(name);
     const now = nowIso();
     await v1.put('projects', {
       id: 'old',
@@ -161,5 +162,34 @@ describe('StoragePort upgrade from version 1', () => {
     expect(await storage.listProjects()).toEqual([]);
     expect(await storage.listAnnotations('old')).toEqual([]);
     expect(await storage.getSession<string>('displayName')).toBe('Sam');
+  });
+});
+
+describe('StoragePort with another tab open', () => {
+  it('fails with a clear message while an older version blocks the upgrade', async () => {
+    const name = _resetDbForTests();
+    // An old tab: version 1, and no handler to close when a newer version asks.
+    const oldTab = await openV1(name);
+
+    await expect(storage.init()).rejects.toThrow(DB_BLOCKED_MESSAGE);
+
+    oldTab.close();
+    // Once the old tab is gone, trying again works.
+    await expect(storage.init()).resolves.toBeUndefined();
+  });
+
+  it('closes its connection when a newer version wants to upgrade', async () => {
+    const name = _resetDbForTests();
+    await storage.init();
+
+    let blocked = false;
+    const newTab = await openDB(name, 3, {
+      blocked() {
+        blocked = true;
+      },
+    });
+
+    expect(blocked).toBe(false);
+    newTab.close();
   });
 });
