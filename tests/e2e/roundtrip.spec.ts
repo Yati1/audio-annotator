@@ -11,6 +11,7 @@ import { SCHEMA_VERSION } from '../../src/features/types';
 async function snapshot(item: AnnotationItemHandle) {
   return {
     id: await item.id(),
+    note: await item.note().innerText(),
     badge: await item.badge().innerText(),
     author: await item.author().innerText(),
     color: await item.locator().evaluate((el) => getComputedStyle(el).borderLeftColor),
@@ -47,6 +48,9 @@ test.describe('roundtrip', () => {
     const expectedPoint = await snapshot(point);
     const expectedRegion = await snapshot(app.annotations.itemByNote('Exported region'));
     expect(expectedPoint.badge).not.toBe(expectedRegion.badge);
+    const pointId = expectedPoint.id;
+    const regionId = expectedRegion.id;
+    if (!pointId || !regionId) throw new Error('annotation has no id');
 
     const download = await app.importExport.exportBundle();
     // The project title comes from the audio file name, minus its extension.
@@ -67,15 +71,14 @@ test.describe('roundtrip', () => {
         buffer: bytes,
       });
 
-      const restoredPoint = freshApp.annotations.itemByNote('Exported point');
+      // By id, not note text: a note filter matches substrings, so it can't catch a changed note.
+      const restoredPoint = freshApp.annotations.itemById(pointId);
       await expect(restoredPoint.replies()).toHaveCount(1);
       await freshApp.waveform.waitUntilReady();
 
-      // Same ids, times, authors (not Ben, the recipient), colors and reply timestamps.
+      // Same ids, notes, times, authors (not Ben, the recipient), colors and reply timestamps.
       expect(await snapshot(restoredPoint)).toEqual(expectedPoint);
-      expect(await snapshot(freshApp.annotations.itemByNote('Exported region'))).toEqual(
-        expectedRegion,
-      );
+      expect(await snapshot(freshApp.annotations.itemById(regionId))).toEqual(expectedRegion);
       expect(await freshApp.annotations.count()).toBe(2);
       expect(await freshApp.transport.durationSeconds()).toBe(4);
 
