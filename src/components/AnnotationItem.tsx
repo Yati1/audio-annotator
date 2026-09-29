@@ -118,7 +118,7 @@ export function AnnotationItem({
               <button
                 type="button"
                 onClick={() => (editing ? setEditing(false) : startEdit())}
-                aria-label="Edit note"
+                aria-label="Edit"
               >
                 ✎
               </button>

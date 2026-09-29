@@ -78,7 +78,7 @@ export class AnnotationItemHandle {
 
   /** Opens the inline editor, replaces the note, and saves. */
   async editNote(note: string): Promise<void> {
-    await this.root.getByRole('button', { name: 'Edit note' }).click();
+    await this.root.getByRole('button', { name: 'Edit', exact: true }).click();
     await this.root.locator('.annotation-edit textarea').fill(note);
     await this.root.locator('.annotation-edit').getByRole('button', { name: 'Save' }).click();
   }
@@ -102,13 +102,13 @@ export class AnnotationItemHandle {
 
   /** Opens the inline editor, types a note, then cancels. */
   async editNoteAndCancel(note: string): Promise<void> {
-    await this.root.getByRole('button', { name: 'Edit note' }).click();
+    await this.root.getByRole('button', { name: 'Edit', exact: true }).click();
     await this.root.locator('.annotation-edit textarea').fill(note);
     await this.root.locator('.annotation-edit').getByRole('button', { name: 'Cancel' }).click();
   }
 
   editButton(): Locator {
-    return this.root.getByRole('button', { name: 'Edit note' });
+    return this.root.getByRole('button', { name: 'Edit', exact: true });
   }
 
   deleteButton(): Locator {
@@ -122,7 +122,7 @@ export class AnnotationItemHandle {
 
   /** Opens the inline editor without changing anything; returns its textarea. */
   async openEditor(): Promise<Locator> {
-    await this.root.getByRole('button', { name: 'Edit note' }).click();
+    await this.root.getByRole('button', { name: 'Edit', exact: true }).click();
     return this.root.locator('.annotation-edit textarea');
   }
 
