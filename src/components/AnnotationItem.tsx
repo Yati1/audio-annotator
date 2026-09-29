@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import type { Annotation, Reply } from '../features/types';
 import type { AnnotationPatch } from '../state/store';
 import { safeAuthorColor } from '../lib/color';
@@ -44,6 +44,9 @@ export function AnnotationItem({
   // Kept as the typed strings, so a half-typed number isn't rewritten under the cursor.
   const [draftStart, setDraftStart] = useState('');
   const [draftEnd, setDraftEnd] = useState('');
+  // The bounds the editor opened with. A drag can move the annotation while the editor is
+  // open, so only fields the user changed are saved.
+  const loadedBounds = useRef({ start: '', end: '' });
 
   const activeReplies = replies.filter((r) => !r.deleted);
   const mine = annotation.authorId === myAuthorId;
@@ -57,8 +60,11 @@ export function AnnotationItem({
   // cancelled doesn't come back on the next open.
   const startEdit = () => {
     setDraft(annotation.note);
-    setDraftStart(String(annotation.startSec));
-    setDraftEnd(annotation.endSec === null ? '' : String(annotation.endSec));
+    const start = String(annotation.startSec);
+    const end = annotation.endSec === null ? '' : String(annotation.endSec);
+    loadedBounds.current = { start, end };
+    setDraftStart(start);
+    setDraftEnd(end);
     setEditing(true);
   };
 
@@ -66,8 +72,11 @@ export function AnnotationItem({
     if (!draft.trim()) return;
     // An empty field becomes NaN, which validation rejects with a clear message.
     const toSec = (v: string) => (v.trim() === '' ? NaN : Number(v));
-    const patch: AnnotationPatch = { note: draft, startSec: toSec(draftStart) };
-    if (annotation.kind === 'region') patch.endSec = toSec(draftEnd);
+    const patch: AnnotationPatch = { note: draft };
+    if (draftStart !== loadedBounds.current.start) patch.startSec = toSec(draftStart);
+    if (annotation.kind === 'region' && draftEnd !== loadedBounds.current.end) {
+      patch.endSec = toSec(draftEnd);
+    }
     if (await onEdit(patch)) setEditing(false);
   };
 
