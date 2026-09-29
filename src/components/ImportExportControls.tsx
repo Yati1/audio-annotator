@@ -39,8 +39,7 @@ export function ImportExportControls(): ReactNode {
           'browser, with all its annotations and replies. This cannot be undone. ' +
           'Export it first if you want to keep a copy.',
       ),
-    );
-    setBusy(false);
+    ).finally(() => setBusy(false));
     if (result) {
       setMessage(
         `Imported. ${result.added} new item(s)` +

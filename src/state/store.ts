@@ -356,30 +356,40 @@ export const useStore = create<AppState>((set, get) => ({
     const { full: incoming, audioBlob } = parsed.result;
     const current = await loadOpenProject(get);
     const sameOriginal = current?.project.id === incoming.project.id ? current : null;
-    if (current && !sameOriginal) {
-      if (confirmReplace && !confirmReplace(current.project.title)) {
-        set({ status: 'ready' });
-        return null;
-      }
-      // Replacing, not merging: delete the old project so it can't linger unseen in
-      // storage. Null it first, as newProject does, so in-flight writes bail.
-      set({ project: null });
-      await storage.deleteProject(current.project.id);
+    const replacing = current && !sameOriginal ? current : null;
+    if (replacing && confirmReplace && !confirmReplace(replacing.project.title)) {
+      set({ status: 'ready' });
+      return null;
     }
     const outcome = merge(sameOriginal, incoming);
+    // Null the project first, as newProject does, so in-flight writes bail.
+    if (replacing) set({ project: null });
 
-    // Persist audio, project, and merged records.
-    await storage.putAudio({
-      id: incoming.audio.id,
-      fileName: incoming.audio.fileName,
-      mimeType: incoming.audio.mimeType,
-      durationSec: incoming.audio.durationSec,
-      byteSize: incoming.audio.byteSize,
-      blob: audioBlob,
-    });
-    await storage.putProject(outcome.project.project);
-    await storage.putAnnotations(outcome.project.annotations);
-    await storage.putReplies(outcome.project.replies);
+    try {
+      await storage.putAudio({
+        id: incoming.audio.id,
+        fileName: incoming.audio.fileName,
+        mimeType: incoming.audio.mimeType,
+        durationSec: incoming.audio.durationSec,
+        byteSize: incoming.audio.byteSize,
+        blob: audioBlob,
+      });
+      await storage.putProject(outcome.project.project);
+      await storage.putAnnotations(outcome.project.annotations);
+      await storage.putReplies(outcome.project.replies);
+      // Replacing, not merging: delete the old project so it can't linger unseen in
+      // storage. Only now, so a failed save above leaves it intact (FR-026).
+      if (replacing) await storage.deleteProject(replacing.project.id);
+    } catch {
+      // Don't leave a half-written new project for the next start to open.
+      if (!sameOriginal) await storage.deleteProject(incoming.project.id).catch(() => {});
+      set({
+        project: current?.project ?? null,
+        status: current ? 'ready' : 'idle',
+        error: 'Could not save the imported project.',
+      });
+      return null;
+    }
 
     const objectUrl = URL.createObjectURL(audioBlob);
     get().setLoadedProject(outcome.project, objectUrl);
