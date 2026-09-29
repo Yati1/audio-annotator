@@ -65,6 +65,9 @@ test.describe('editing and deleting annotations', () => {
     await app.annotations.itemByNote('Original note').delete();
     await message;
 
+    // Reload so a delete that ignored the dismissal would have reached storage by now.
+    await app.page.reload();
+    await app.waveform.waitUntilReady();
     await expect(app.annotations.itemByNote('Original note').locator()).toBeVisible();
   });
 
@@ -123,6 +126,9 @@ test.describe('editing and deleting replies', () => {
     await item.deleteReply(0);
     await message;
 
-    await expect(item.replies()).toHaveCount(1);
+    // Reload so a delete that ignored the dismissal would have reached storage by now.
+    await app.page.reload();
+    await app.waveform.waitUntilReady();
+    await expect(app.annotations.itemByNote('Anchor annotation').replies()).toHaveCount(1);
   });
 });
