@@ -15,12 +15,16 @@ export interface MergeOutcome {
 
 interface Mergeable {
   id: string;
+  authorId: string;
   updatedAt: string;
   deleted?: boolean;
 }
 
 /** Picks the version of one item to keep, and whether it differs from the local one. */
 function mergeItem<T extends Mergeable>(local: T, incoming: T): { item: T; changed: boolean } {
+  // Only the author's device can change an item, so a copy under another author was
+  // hand-edited. Ignore it, delete included.
+  if (incoming.authorId !== local.authorId) return { item: local, changed: false };
   // Equal timestamps keep local: they can only differ in content if a bundle was hand-edited.
   const newer = incoming.updatedAt > local.updatedAt ? incoming : local;
   if (local.deleted || incoming.deleted) {

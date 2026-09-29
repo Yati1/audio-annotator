@@ -124,6 +124,25 @@ describe('merge', () => {
     expect(outcome.updated.annotations).toBe(0);
   });
 
+  it('ignores a newer copy that claims a different author', () => {
+    const local = makeBase();
+    const edited = makeBase();
+    edited.annotations[0] = {
+      ...edited.annotations[0],
+      note: 'Taken over',
+      authorId: 'device-other',
+      updatedAt: later(local.annotations[0].updatedAt),
+    };
+    const deleted = makeBase();
+    deleted.annotations[0] = { ...edited.annotations[0], deleted: true };
+
+    for (const incoming of [edited, deleted]) {
+      const outcome = merge(local, incoming);
+      expect(outcome.project.annotations[0]).toEqual(local.annotations[0]);
+      expect(outcome.updated.annotations).toBe(0);
+    }
+  });
+
   it('a local tombstone survives a newer incoming copy', () => {
     const local = makeBase();
     local.annotations[0] = { ...local.annotations[0], deleted: true };
