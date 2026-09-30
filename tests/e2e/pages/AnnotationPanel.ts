@@ -20,6 +20,13 @@ export class AnnotationPanel {
     return new AnnotationItemHandle(this.items().filter({ hasText: note }));
   }
 
+  /** Locates an annotation item by its stable id, which survives note edits. Quotes the id
+   *  as a CSS string, since an imported bundle's id can hold selector-breaking characters. */
+  itemById(id: string): AnnotationItemHandle {
+    const quoted = `"${id.replace(/[\\"]/g, '\\$&').replace(/\n/g, '\\a ')}"`;
+    return new AnnotationItemHandle(this.list().locator(`[data-annotation-id=${quoted}]`));
+  }
+
   itemAt(index: number): AnnotationItemHandle {
     return new AnnotationItemHandle(this.items().nth(index));
   }
@@ -56,6 +63,35 @@ export class AnnotationItemHandle {
     await this.root.getByRole('button', { name: /Select (point|region)/ }).click();
   }
 
+  note(): Locator {
+    return this.root.locator('.annotation-note');
+  }
+
+  /** Opens the inline editor, replaces the note, and saves. */
+  async editNote(note: string): Promise<void> {
+    await this.root.getByRole('button', { name: 'Edit note' }).click();
+    await this.root.locator('.annotation-edit textarea').fill(note);
+    await this.root.locator('.annotation-edit').getByRole('button', { name: 'Save' }).click();
+  }
+
+  /** Opens the inline editor, types a note, then cancels. */
+  async editNoteAndCancel(note: string): Promise<void> {
+    await this.root.getByRole('button', { name: 'Edit note' }).click();
+    await this.root.locator('.annotation-edit textarea').fill(note);
+    await this.root.locator('.annotation-edit').getByRole('button', { name: 'Cancel' }).click();
+  }
+
+  /** Clicks Delete. Arm a confirm handler on the page first (see AppPage). */
+  async delete(): Promise<void> {
+    await this.root.getByRole('button', { name: 'Delete annotation' }).click();
+  }
+
+  /** Opens the inline editor without changing anything; returns its textarea. */
+  async openEditor(): Promise<Locator> {
+    await this.root.getByRole('button', { name: 'Edit note' }).click();
+    return this.root.locator('.annotation-edit textarea');
+  }
+
   async addReply(text: string): Promise<void> {
     await this.root.getByRole('textbox', { name: 'Add a reply' }).fill(text);
     await this.root.getByRole('button', { name: 'Reply', exact: true }).click();
@@ -67,5 +103,17 @@ export class AnnotationItemHandle {
 
   reply(index: number): Locator {
     return this.replies().nth(index);
+  }
+
+  async editReply(index: number, text: string): Promise<void> {
+    const reply = this.reply(index);
+    await reply.getByRole('button', { name: 'Edit reply' }).click();
+    await reply.locator('.reply-edit input').fill(text);
+    await reply.getByRole('button', { name: 'Save' }).click();
+  }
+
+  /** Clicks Delete on a reply. Arm a confirm handler on the page first (see AppPage). */
+  async deleteReply(index: number): Promise<void> {
+    await this.reply(index).getByRole('button', { name: 'Delete reply' }).click();
   }
 }
