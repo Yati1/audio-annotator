@@ -60,7 +60,16 @@ export class AnnotationItemHandle {
   }
 
   async select(): Promise<void> {
-    await this.root.getByRole('button', { name: /Select (point|region)/ }).click();
+    await this.badge().click();
+  }
+
+  /** The kind-and-time button, e.g. "● 0:02" or "▭ 0:00–0:04". */
+  badge(): Locator {
+    return this.root.getByRole('button', { name: /Select (point|region)/ });
+  }
+
+  author(): Locator {
+    return this.root.locator('.annotation-head .author');
   }
 
   note(): Locator {

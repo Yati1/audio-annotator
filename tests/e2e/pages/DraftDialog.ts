@@ -1,4 +1,4 @@
-import type { Locator, Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 /** The inline note-entry dialog used to create both point and region annotations. */
 export class DraftDialog {
@@ -24,8 +24,11 @@ export class DraftDialog {
     await this.root().getByRole('button', { name: 'Cancel' }).click();
   }
 
+  /** Saves a new annotation and waits for the dialog to close. The app closes it only once
+   *  the save finishes, and a save still in flight would close the next draft opened. */
   async createWithNote(note: string): Promise<void> {
     await this.fillNote(note);
     await this.save();
+    await expect(this.root()).toBeHidden();
   }
 }
