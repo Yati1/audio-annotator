@@ -100,6 +100,37 @@ describe('bundle import errors', () => {
     }
   });
 
+  it('E_SCHEMA: replies that are not an array', () => {
+    const full = baseProject();
+    const now = nowIso();
+    full.annotations.push({
+      id: 'an-1',
+      projectId: 'p1',
+      kind: 'point',
+      startSec: 1,
+      endSec: null,
+      note: 'n',
+      authorName: 'Sam',
+      authorColor: '#3987e5',
+      authorId: 'device-sam',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    for (const bad of [{}, 'abc', 5]) {
+      const manifest = buildManifest(full);
+      (manifest.annotations[0] as { replies: unknown }).replies = bad;
+      const r = parseBundle(
+        zipSync({
+          'annotations.json': strToU8(JSON.stringify(manifest)),
+          'audio/test.mp3': audioBytes,
+        }),
+      );
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.code).toBe('E_SCHEMA');
+    }
+  });
+
   it('E_SCHEMA: an annotation or reply without an authorId', async () => {
     const full = baseProject();
     const now = nowIso();

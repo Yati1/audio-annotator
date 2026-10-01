@@ -9,7 +9,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "minimum": 2,
+      "const": 2,
       "description": "Bundle schema version. Readers reject any value other than the current one (2)."
     },
     "project": {

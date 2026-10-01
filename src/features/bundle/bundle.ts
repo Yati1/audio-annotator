@@ -156,9 +156,12 @@ function hasAuthorId(item: unknown): boolean {
 
 /** Every annotation and reply must name its author's device (schema version 2+). */
 function allItemsHaveAuthorId(m: Manifest): boolean {
-  return m.annotations.every(
-    (a) => hasAuthorId(a) && (a.replies ?? []).every((r) => hasAuthorId(r)),
-  );
+  return m.annotations.every((a) => {
+    if (!hasAuthorId(a)) return false;
+    // `replies` comes from the file, so it may not be an array; reject it rather than throw.
+    const replies: unknown = a.replies ?? [];
+    return Array.isArray(replies) && replies.every((r) => hasAuthorId(r));
+  });
 }
 
 /** Parses and validates a bundle file. Never mutates local data. */
