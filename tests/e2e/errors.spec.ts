@@ -10,15 +10,14 @@ import {
 test.describe('errors', () => {
   test('rejects a region ending at or before its start (FR-010)', async ({ app }) => {
     await app.ensureSession('Ava');
+    await app.openAudioFixture(makeWavFile({ durationSec: 1 }));
 
-    // A large fixture widens the gap between "audio metadata loaded" (fast, unlocks the
-    // toolbar and the keyboard shortcuts) and "waveform finished decoding" (slower, sets
-    // App's `duration` state). Pressing 'r' inside that gap computes start = end = 0 —
-    // a genuinely invalid, zero-length region — without needing any numeric input field.
-    const input = app.page.getByTestId('open-audio-input');
-    await input.setInputFiles(makeWavFile({ durationSec: 900 }));
-    await input.evaluate((el) => (el as HTMLInputElement).blur());
-    await app.page.getByRole('toolbar', { name: 'Playback and annotation controls' }).waitFor();
+    // With the playhead at the very end, 'r' clamps the region's end to the track length,
+    // so start = end — a zero-length region — with no numeric input field needed. Playing
+    // to the end gets the playhead there exactly; a click near the edge would not.
+    await app.page.keyboard.press('Space');
+    await expect.poll(() => app.transport.isPlaying()).toBe(true);
+    await expect.poll(() => app.transport.isPlaying(), { timeout: 10_000 }).toBe(false);
 
     await app.page.keyboard.press('r');
     await app.draftDialog.fillNote('Invalid region attempt');
