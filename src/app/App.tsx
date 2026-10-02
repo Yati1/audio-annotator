@@ -227,6 +227,7 @@ export function App(): ReactNode {
               url={objectUrl}
               annotations={annotations}
               selectedId={selectedId}
+              myAuthorId={authorId}
               authorColor={authorColor}
               draftRegion={
                 draft?.kind === 'region' ? { startSec: draft.startSec, endSec: draft.endSec } : null
@@ -236,6 +237,9 @@ export function App(): ReactNode {
               onPlayState={onPlayState}
               onPendingRegion={onPendingRegion}
               onSelectAnnotation={setSelectedId}
+              onAnnotationMoved={(id, startSec, endSec) =>
+                editAnnotation(id, endSec === null ? { startSec } : { startSec, endSec })
+              }
             />
             <TransportBar
               playing={playing}

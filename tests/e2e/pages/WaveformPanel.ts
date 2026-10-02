@@ -102,18 +102,65 @@ export class WaveformPanel {
     }
   }
 
-  /** Holds both mouse buttons and drags horizontally by `dx` pixels, centered on the waveform. */
-  async panBy(dx: number): Promise<void> {
+  /**
+   * Holds both mouse buttons and drags horizontally by `dx` pixels, centered on the waveform.
+   * `releaseFirst` picks which button comes up first; `moveBetween` moves the mouse that many
+   * pixels while only the other button is still held. `dragFirst` moves that many pixels with
+   * only the left button down before the right one joins it. `pauseBetween` waits that many
+   * ms between the two releases, as a person does; back-to-back releases can reach the page
+   * before its pending timers run, which a real hand never manages.
+   */
+  async panBy(
+    dx: number,
+    {
+      releaseFirst = 'right',
+      moveBetween = 0,
+      dragFirst = 0,
+      pauseBetween = 0,
+    }: {
+      releaseFirst?: 'left' | 'right';
+      moveBetween?: number;
+      dragFirst?: number;
+      pauseBetween?: number;
+    } = {},
+  ): Promise<void> {
     const box = await this.canvas().boundingBox();
     if (!box) throw new Error('waveform canvas not visible');
     const cx = box.x + box.width / 2;
     const cy = box.y + box.height / 2;
     await this.page.mouse.move(cx, cy);
     await this.page.mouse.down({ button: 'left' });
+    if (dragFirst) await this.page.mouse.move(cx + dragFirst, cy, { steps: 5 });
     await this.page.mouse.down({ button: 'right' });
-    await this.page.mouse.move(cx + dx, cy, { steps: 5 });
-    await this.page.mouse.up({ button: 'right' });
-    await this.page.mouse.up({ button: 'left' });
+    await this.page.mouse.move(cx + dragFirst + dx, cy, { steps: 5 });
+    await this.page.mouse.up({ button: releaseFirst });
+    if (pauseBetween) await this.page.waitForTimeout(pauseBetween);
+    if (moveBetween) {
+      await this.page.mouse.move(cx + dragFirst + dx + moveBetween, cy, { steps: 5 });
+    }
+    await this.page.mouse.up({ button: releaseFirst === 'right' ? 'left' : 'right' });
+  }
+
+  /** The region or point marker drawn for the given annotation id. */
+  region(id: string): Locator {
+    return this.canvas().locator(`[part~="anno-${id}"]`);
+  }
+
+  /** A region's right-hand resize handle. Only present while the region can be resized. */
+  rightHandle(id: string): Locator {
+    return this.region(id).locator('[part~="region-handle-right"]');
+  }
+
+  /** Presses the left button on `target` and drags it to a fractional canvas position. */
+  async dragTo(target: Locator, toFraction: number): Promise<void> {
+    const from = await target.boundingBox();
+    const box = await this.canvas().boundingBox();
+    if (!from || !box) throw new Error('drag target or waveform canvas not visible');
+    const y = from.y + from.height / 2;
+    await this.page.mouse.move(from.x + from.width / 2, y);
+    await this.page.mouse.down();
+    await this.page.mouse.move(box.x + box.width * toFraction, y, { steps: 10 });
+    await this.page.mouse.up();
   }
 
   /** Resets zoom and pan to the default fit-to-width view. */
