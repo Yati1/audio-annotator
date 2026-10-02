@@ -34,29 +34,65 @@ interface AnnotatorDB extends DBSchema {
 }
 
 const DB_NAME = 'audio-annotator';
-const DB_VERSION = 1;
+/** 2: records must carry `authorId`. Upgrading from 1 wipes stored projects (see below). */
+const DB_VERSION = 2;
 
 let currentDbName = DB_NAME;
 let dbPromise: Promise<IDBPDatabase<AnnotatorDB>> | null = null;
 
+/** Why `init` fails while another tab still has an older version of the database open. */
+export const DB_BLOCKED_MESSAGE =
+  'Close other Audio Annotator tabs, then reload this page to finish updating.';
+
 function getDb(): Promise<IDBPDatabase<AnnotatorDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<AnnotatorDB>(currentDbName, DB_VERSION, {
-      upgrade(db) {
-        const projects = db.createObjectStore('projects', { keyPath: 'id' });
-        projects.createIndex('updatedAt', 'updatedAt');
+    const opening = new Promise<IDBPDatabase<AnnotatorDB>>((resolve, reject) => {
+      let db: IDBPDatabase<AnnotatorDB> | undefined;
+      let gaveUp = false;
+      openDB<AnnotatorDB>(currentDbName, DB_VERSION, {
+        upgrade(db, oldVersion, _newVersion, tx) {
+          if (oldVersion < 1) {
+            const projects = db.createObjectStore('projects', { keyPath: 'id' });
+            projects.createIndex('updatedAt', 'updatedAt');
 
-        db.createObjectStore('audio', { keyPath: 'id' });
+            db.createObjectStore('audio', { keyPath: 'id' });
 
-        const annotations = db.createObjectStore('annotations', { keyPath: 'id' });
-        annotations.createIndex('projectId', 'projectId');
+            const annotations = db.createObjectStore('annotations', { keyPath: 'id' });
+            annotations.createIndex('projectId', 'projectId');
 
-        const replies = db.createObjectStore('replies', { keyPath: 'id' });
-        replies.createIndex('annotationId', 'annotationId');
+            const replies = db.createObjectStore('replies', { keyPath: 'id' });
+            replies.createIndex('annotationId', 'annotationId');
 
-        db.createObjectStore('sessionMeta', { keyPath: 'key' });
-      },
+            db.createObjectStore('sessionMeta', { keyPath: 'key' });
+          }
+          if (oldVersion === 1) {
+            // Version 1 records may lack `authorId`, which is now required, so drop every
+            // stored project. Session values (name, authorId, color) are kept.
+            void tx.objectStore('projects').clear();
+            void tx.objectStore('audio').clear();
+            void tx.objectStore('annotations').clear();
+            void tx.objectStore('replies').clear();
+          }
+        },
+        blocked() {
+          // Another tab holds an older version open, so the upgrade waits until that tab
+          // closes. Fail now so the user learns why, instead of watching a spinner.
+          gaveUp = true;
+          if (dbPromise === opening) dbPromise = null;
+          reject(new Error(DB_BLOCKED_MESSAGE));
+        },
+        blocking() {
+          // A newer version of the app is waiting to upgrade in another tab; let it.
+          db?.close();
+          if (dbPromise === opening) dbPromise = null;
+        },
+      }).then((opened) => {
+        // The open went through after we gave up; don't hold a connection nobody uses.
+        if (gaveUp) opened.close();
+        else resolve((db = opened));
+      }, reject);
     });
+    dbPromise = opening;
   }
   return dbPromise;
 }
@@ -176,9 +212,11 @@ export const storage: StoragePort = {
   },
 };
 
-/** Test-only: reset the cached DB handle so a fresh fake-indexeddb can be used. */
+/** Test-only: reset the cached DB handle so a fresh fake-indexeddb can be used. Returns
+ *  the new database name. */
 let _testDbCounter = 0;
-export function _resetDbForTests(): void {
+export function _resetDbForTests(): string {
   dbPromise = null;
   currentDbName = `${DB_NAME}-test-${++_testDbCounter}`;
+  return currentDbName;
 }

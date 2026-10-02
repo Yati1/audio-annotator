@@ -17,7 +17,7 @@ export interface AddReplyInput {
   text: string;
   authorName: string;
   authorColor: string;
-  authorId?: string;
+  authorId: string;
 }
 
 export interface ReplyService {

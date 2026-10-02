@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { annotationService } from '../../src/features/annotations/annotations';
 
-const base = { projectId: 'p1', note: 'test', authorName: 'Sam', authorColor: '#3987e5' };
+const base = {
+  projectId: 'p1',
+  note: 'test',
+  authorName: 'Sam',
+  authorColor: '#3987e5',
+  authorId: 'device-sam',
+};
 
 describe('annotation validation', () => {
   it('creates a valid point', () => {

@@ -16,6 +16,7 @@ export interface ManifestReply {
   text: string;
   authorName: string;
   authorColor: string;
+  authorId: string;
   createdAt: string;
   updatedAt: string;
   deleted?: boolean;
@@ -29,6 +30,7 @@ export interface ManifestAnnotation {
   note: string;
   authorName: string;
   authorColor: string;
+  authorId: string;
   createdAt: string;
   updatedAt: string;
   deleted?: boolean;
@@ -72,6 +74,7 @@ export function buildManifest(full: FullProject): Manifest {
     note: a.note,
     authorName: a.authorName,
     authorColor: a.authorColor,
+    authorId: a.authorId,
     createdAt: a.createdAt,
     updatedAt: a.updatedAt,
     deleted: a.deleted,
@@ -80,6 +83,7 @@ export function buildManifest(full: FullProject): Manifest {
       text: r.text,
       authorName: r.authorName,
       authorColor: r.authorColor,
+      authorId: r.authorId,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
       deleted: r.deleted,
@@ -145,6 +149,21 @@ function validateManifest(m: unknown): m is Manifest {
   return true;
 }
 
+function hasAuthorId(item: unknown): boolean {
+  const id = (item as { authorId?: unknown } | null)?.authorId;
+  return typeof id === 'string' && id.length > 0;
+}
+
+/** Every annotation and reply must name its author's device (schema version 2+). */
+function allItemsHaveAuthorId(m: Manifest): boolean {
+  return m.annotations.every((a) => {
+    if (!hasAuthorId(a)) return false;
+    // `replies` comes from the file, so it may not be an array; reject it rather than throw.
+    const replies: unknown = a.replies ?? [];
+    return Array.isArray(replies) && replies.every((r) => hasAuthorId(r));
+  });
+}
+
 /** Parses and validates a bundle file. Never mutates local data. */
 export function parseBundle(bytes: Uint8Array):
   | { ok: true; result: ImportResult }
@@ -188,6 +207,21 @@ export function parseBundle(bytes: Uint8Array):
       error: { code: 'E_VERSION', message: 'This bundle was made with a newer app version.' },
     };
   }
+  if (manifest.schemaVersion < SCHEMA_VERSION) {
+    return {
+      ok: false,
+      error: {
+        code: 'E_VERSION',
+        message: 'This bundle was made with an older app version and can no longer be opened.',
+      },
+    };
+  }
+  if (!allItemsHaveAuthorId(manifest)) {
+    return {
+      ok: false,
+      error: { code: 'E_SCHEMA', message: 'annotations.json failed validation.' },
+    };
+  }
   if (!SUPPORTED_MIME.has(manifest.audio.mimeType)) {
     return {
       ok: false,
@@ -215,6 +249,7 @@ export function parseBundle(bytes: Uint8Array):
       note: a.note,
       authorName: a.authorName,
       authorColor: isAuthorColor(a.authorColor) ? a.authorColor : FALLBACK_AUTHOR_COLOR,
+      authorId: a.authorId,
       createdAt: a.createdAt,
       updatedAt: a.updatedAt,
       deleted: a.deleted,
@@ -226,6 +261,7 @@ export function parseBundle(bytes: Uint8Array):
         text: r.text,
         authorName: r.authorName,
         authorColor: isAuthorColor(r.authorColor) ? r.authorColor : FALLBACK_AUTHOR_COLOR,
+        authorId: r.authorId,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
         deleted: r.deleted,

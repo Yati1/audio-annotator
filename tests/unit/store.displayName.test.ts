@@ -124,20 +124,6 @@ describe('store: renaming the display name', () => {
     expect(persisted[0].authorName).toBe('Sam');
   });
 
-  it('does not rewrite content authored before authorId existed (no authorId set)', async () => {
-    const legacy = annotationService.createPoint(
-      { projectId, startSec: 1, note: 'legacy', authorName: 'Sam', authorColor: '#3987e5' },
-      120,
-    );
-    if (!legacy.ok) throw new Error('setup failed');
-    await storage.putAnnotations([legacy.value]);
-    useStore.setState({ annotations: [legacy.value] });
-
-    await useStore.getState().setDisplayName('Samuel');
-
-    expect(useStore.getState().annotations[0].authorName).toBe('Sam');
-  });
-
   it('does nothing when the name is unchanged or blank', async () => {
     const mine = annotationService.createPoint(
       {

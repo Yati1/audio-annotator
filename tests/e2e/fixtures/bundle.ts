@@ -54,6 +54,17 @@ export function buildBundleWithNewerSchema(full: FullProject, audioBytes: Uint8A
   );
 }
 
+/** A bundle from before annotations and replies carried an `authorId` (schema version 1). */
+export function buildBundleWithOlderSchema(full: FullProject, audioBytes: Uint8Array): Buffer {
+  const manifest = { ...buildManifest(full), schemaVersion: SCHEMA_VERSION - 1 };
+  return Buffer.from(
+    zipSync({
+      'annotations.json': strToU8(JSON.stringify(manifest)),
+      [`audio/${full.audio.fileName}`]: audioBytes,
+    }),
+  );
+}
+
 export function corruptZipBytes(): Buffer {
   return Buffer.from('not a zip file, just truncated garbage bytes');
 }

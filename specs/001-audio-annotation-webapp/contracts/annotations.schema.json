@@ -9,8 +9,8 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "minimum": 1,
-      "description": "Bundle schema version. Readers reject newer-than-supported values."
+      "const": 2,
+      "description": "Bundle schema version. Readers reject any value other than the current one (2)."
     },
     "project": {
       "type": "object",
@@ -64,6 +64,7 @@
         "endSec",
         "note",
         "authorName",
+        "authorId",
         "createdAt",
         "updatedAt"
       ],
@@ -74,6 +75,7 @@
         "endSec": { "type": ["number", "null"], "minimum": 0 },
         "note": { "type": "string", "minLength": 1 },
         "authorName": { "type": "string", "minLength": 1 },
+        "authorId": { "type": "string", "minLength": 1 },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" },
         "deleted": { "type": "boolean", "default": false },
@@ -99,11 +101,12 @@
     "reply": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["id", "text", "authorName", "createdAt", "updatedAt"],
+      "required": ["id", "text", "authorName", "authorId", "createdAt", "updatedAt"],
       "properties": {
         "id": { "type": "string", "format": "uuid" },
         "text": { "type": "string", "minLength": 1 },
         "authorName": { "type": "string", "minLength": 1 },
+        "authorId": { "type": "string", "minLength": 1 },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" },
         "deleted": { "type": "boolean", "default": false }

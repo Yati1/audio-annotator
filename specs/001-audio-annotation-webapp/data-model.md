@@ -58,7 +58,7 @@ A note anchored to the audio, either a single point or a time region.
 | `endSec`     | number \| null               | `null` when `kind = "point"`. When `kind = "region"`: required, `startSec < endSec ≤ durationSec` (FR-010 rejects `end ≤ start` and zero-length regions). |
 | `note`       | string                       | Required, non-empty (FR-006).                                                                                                                             |
 | `authorName` | string                       | Required. Self-entered display name at authoring time (FR-021); not unique/verified. Rewritten in place if the author renames (see Participant, below). |
-| `authorId`   | UUID (string), optional      | Local per-device identifier of the author. Not serialized in export bundles (FR-021) — scopes rename rewrites to "my" content on this device.            |
+| `authorId`   | UUID (string)                | Required. Per-device identifier of the author, carried in export bundles (FR-021). Scopes rename rewrites to "my" content.                             |
 | `createdAt`  | ISO 8601 string              | Required (FR-012).                                                                                                                                        |
 | `updatedAt`  | ISO 8601 string              | Required.                                                                                                                                                 |
 | `deleted`    | boolean                      | Optional, default `false`. Soft-delete tombstone so deletions survive merges without resurrecting on re-import.                                           |
@@ -80,7 +80,7 @@ A response within an annotation's thread.
 | `annotationId` | UUID (string)   | Required. Owning annotation.                                               |
 | `text`         | string          | Required, non-empty (FR-013).                                              |
 | `authorName`   | string          | Required. Display name at authoring time (FR-021). Rewritten in place if the author renames (see Participant, below). |
-| `authorId`     | UUID (string), optional | Local per-device identifier of the author. Not serialized in export bundles (FR-021).                     |
+| `authorId`     | UUID (string)   | Required. Per-device identifier of the author, carried in export bundles (FR-021). |
 | `createdAt`    | ISO 8601 string | Required. Sort key for chronological display (FR-014).                     |
 | `updatedAt`    | ISO 8601 string | Required.                                                                  |
 | `deleted`      | boolean         | Optional, default `false`. Soft-delete tombstone (FR-015; survives merge). |
@@ -95,9 +95,9 @@ A per-device `authorId` (also held in `sessionMeta`, generated once) is stamped 
 annotations/replies alongside `authorName`. When a participant changes their display name,
 `authorName` is rewritten on annotations/replies in the currently open project where
 `authorId` matches the local device's — this is the only way "my content" can be
-recognized without accounts. `authorId` is never exported in bundles, so it carries no
-cross-device meaning; content without a matching `authorId` (imported, pre-existing before
-this identifier existed, or authored by someone else) is left untouched by a rename.
+recognized without accounts. `authorId` is exported in bundles, so imported content keeps
+its author's id; a rename leaves content with any other `authorId` untouched. Since
+schema version 2 every annotation and reply must carry one.
 
 ## Lifecycle & state transitions
 

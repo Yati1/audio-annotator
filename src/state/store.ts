@@ -81,7 +81,12 @@ export const useStore = create<AppState>((set, get) => ({
 
   async init() {
     set({ status: 'loading' });
-    await storage.init();
+    try {
+      await storage.init();
+    } catch (e) {
+      set({ status: 'idle', error: e instanceof Error ? e.message : 'Could not open storage.' });
+      return;
+    }
     const name = (await storage.getSession<string>('displayName')) ?? '';
     let authorId = await storage.getSession<string>('authorId');
     if (!authorId) {

@@ -3,7 +3,8 @@
  * These are storage- and framework-agnostic.
  */
 
-export const SCHEMA_VERSION = 1;
+/** 2: annotations and replies carry a required `authorId`. Version 1 bundles are rejected. */
+export const SCHEMA_VERSION = 2;
 
 export type SupportedMimeType =
   | 'audio/mpeg'
@@ -57,8 +58,8 @@ export interface Annotation {
   authorName: string;
   /** Per-author color, assigned once and carried through export/import. */
   authorColor: string;
-  /** Local device identity of the author (not part of the export bundle format). */
-  authorId?: string;
+  /** Per-device identity of the author, carried through export/import. */
+  authorId: string;
   createdAt: string;
   updatedAt: string;
   deleted?: boolean;
@@ -71,8 +72,8 @@ export interface Reply {
   authorName: string;
   /** Per-author color, assigned once and carried through export/import. */
   authorColor: string;
-  /** Local device identity of the author (not part of the export bundle format). */
-  authorId?: string;
+  /** Per-device identity of the author, carried through export/import. */
+  authorId: string;
   createdAt: string;
   updatedAt: string;
   deleted?: boolean;

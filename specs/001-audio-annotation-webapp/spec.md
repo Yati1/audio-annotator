@@ -196,10 +196,10 @@ audio, annotations, and threads are restored intact.
   authored them, using the self-entered display name in effect at the time of authoring,
   and MUST preserve that attribution through export and import. Users MAY change their
   display name at any time; doing so relabels the attribution on annotations and replies
-  they authored on the same device in the currently open project (matched by a local,
+  they authored on the same device in the currently open project (matched by a
   per-device author identifier — not the display name string itself, so it does not
-  relabel another participant's content). Content authored on a different device, in a
-  different project, or before this per-device identifier existed keeps its original
+  relabel another participant's content). The identifier is carried in export bundles.
+  Content authored on a different device or in a different project keeps its original
   attribution.
 - **FR-025**: System MUST NOT require account creation, sign-in, or a backend service;
   all functionality operates locally in the browser.

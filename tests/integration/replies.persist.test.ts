@@ -36,12 +36,14 @@ describe('reply storage persistence', () => {
       annotationId: 'an-1',
       text: 'first',
       authorName: 'A',
+      authorId: 'device-a',
       authorColor: '#3987e5',
     });
     const r2 = replyService.add({
       annotationId: 'an-1',
       text: 'second',
       authorName: 'B',
+      authorId: 'device-b',
       authorColor: '#d95926',
     });
     if (!r1.ok || !r2.ok) throw new Error('failed');
@@ -60,6 +62,7 @@ describe('reply storage persistence', () => {
       annotationId: 'an-1',
       text: 'original',
       authorName: 'A',
+      authorId: 'device-a',
       authorColor: '#3987e5',
     });
     if (!r.ok) throw new Error('failed');

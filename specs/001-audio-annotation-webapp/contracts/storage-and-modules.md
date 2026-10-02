@@ -6,7 +6,10 @@ testable (Constitution I/II) and decoupled from React and from wavesurfer.
 
 ## IndexedDB schema
 
-**Database**: `audio-annotator` — **version**: `1`
+**Database**: `audio-annotator` — **version**: `2`
+
+Upgrading from version 1 clears `projects`, `audio`, `annotations` and `replies`, because
+version 1 records may lack the now-required `authorId`. `sessionMeta` is kept.
 
 | Object store  | Key   | Indexes                                    | Holds                                                                    |
 | ------------- | ----- | ------------------------------------------ | ------------------------------------------------------------------------ |

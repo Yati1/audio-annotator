@@ -30,7 +30,7 @@ Rules:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "project": {
     "id": "b1c2...uuid",
     "title": "Interview with A",
@@ -53,6 +53,7 @@ Rules:
       "endSec": 18.4,
       "note": "Background noise here",
       "authorName": "Sam",
+      "authorId": "device-uuid-sam",
       "createdAt": "2026-07-09T10:05:00.000Z",
       "updatedAt": "2026-07-09T10:05:00.000Z",
       "deleted": false,
@@ -61,6 +62,7 @@ Rules:
           "id": "rp-uuid-1",
           "text": "Agreed, we should re-record.",
           "authorName": "Jo",
+          "authorId": "device-uuid-jo",
           "createdAt": "2026-07-09T10:10:00.000Z",
           "updatedAt": "2026-07-09T10:10:00.000Z",
           "deleted": false
@@ -74,6 +76,7 @@ Rules:
       "endSec": null,
       "note": "Key quote starts",
       "authorName": "Sam",
+      "authorId": "device-uuid-sam",
       "createdAt": "2026-07-09T10:06:00.000Z",
       "updatedAt": "2026-07-09T10:06:00.000Z",
       "deleted": false,
@@ -105,8 +108,9 @@ then `id`) so identical projects produce byte-comparable JSON (testability, Cons
 
 1. Parse zip. If not a valid zip, or `annotations.json` missing, or the referenced audio
    entry missing ⇒ return a validation error; **do not** mutate existing local data (FR-026).
-2. Validate `annotations.json` against the schema. Unknown **newer** `schemaVersion` ⇒
-   clear "unsupported version" error (FR-026). Known/older versions ⇒ upgrade in-memory.
+2. Validate `annotations.json` against the schema. Any `schemaVersion` other than the
+   current one ⇒ clear "unsupported version" error (FR-026). Older bundles are not
+   upgraded: version 1 lacks the required `authorId`.
 3. Resolve the audio blob from the `audio/` entry.
 4. If `project.id` is new ⇒ create project (open as project). If it already exists locally
    ⇒ merge annotations/replies by `id` (union, tombstone-aware) with no data loss
@@ -121,9 +125,11 @@ then `id`) so identical projects produce byte-comparable JSON (testability, Cons
 | `E_NO_MANIFEST` | `annotations.json` missing                    |
 | `E_NO_AUDIO`    | Referenced `audio/` entry missing             |
 | `E_SCHEMA`      | `annotations.json` fails schema validation    |
-| `E_VERSION`     | `schemaVersion` newer than app supports       |
+| `E_VERSION`     | `schemaVersion` newer or older than the app's |
 | `E_AUDIO_TYPE`  | Audio MIME/type not in supported set (FR-030) |
 
 Versioning policy: `schemaVersion` is an integer. Additive fields do not bump it; readers
-ignore unknown fields. Breaking changes bump the integer and the app supports reading the
-previous version for at least one major release.
+ignore unknown fields. Breaking changes bump the integer.
+
+- Version 2 made `authorId` required on every annotation and reply. Version 1 bundles are
+  rejected rather than upgraded, since their items have no author id to give them.
