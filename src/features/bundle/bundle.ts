@@ -164,6 +164,25 @@ function allItemsHaveAuthorId(m: Manifest): boolean {
   });
 }
 
+function isTimestamp(value: unknown): boolean {
+  return typeof value === 'string' && Number.isFinite(Date.parse(value));
+}
+
+/** Every stored timestamp must parse; `utc` then rewrites it in the app's own form. */
+function allTimestampsValid(m: Manifest): boolean {
+  const stamped = [m.project, ...m.annotations, ...m.annotations.flatMap((a) => a.replies ?? [])];
+  return stamped.every((x) => isTimestamp(x.createdAt) && isTimestamp(x.updatedAt));
+}
+
+/**
+ * Sorting compares timestamps as strings, which only orders them correctly in one
+ * form: UTC with milliseconds, as `toISOString` writes. A foreign bundle could say
+ * `10:30:00+01:00`, which sorts after `10:00:00.000Z` though it is earlier.
+ */
+function utc(iso: string): string {
+  return new Date(iso).toISOString();
+}
+
 /** Parses and validates a bundle file. Never mutates local data. */
 export function parseBundle(bytes: Uint8Array):
   | { ok: true; result: ImportResult }
@@ -216,7 +235,7 @@ export function parseBundle(bytes: Uint8Array):
       },
     };
   }
-  if (!allItemsHaveAuthorId(manifest)) {
+  if (!allItemsHaveAuthorId(manifest) || !allTimestampsValid(manifest)) {
     return {
       ok: false,
       error: { code: 'E_SCHEMA', message: 'annotations.json failed validation.' },
@@ -250,8 +269,8 @@ export function parseBundle(bytes: Uint8Array):
       authorName: a.authorName,
       authorColor: isAuthorColor(a.authorColor) ? a.authorColor : FALLBACK_AUTHOR_COLOR,
       authorId: a.authorId,
-      createdAt: a.createdAt,
-      updatedAt: a.updatedAt,
+      createdAt: utc(a.createdAt),
+      updatedAt: utc(a.updatedAt),
       deleted: a.deleted,
     });
     for (const r of a.replies ?? []) {
@@ -262,8 +281,8 @@ export function parseBundle(bytes: Uint8Array):
         authorName: r.authorName,
         authorColor: isAuthorColor(r.authorColor) ? r.authorColor : FALLBACK_AUTHOR_COLOR,
         authorId: r.authorId,
-        createdAt: r.createdAt,
-        updatedAt: r.updatedAt,
+        createdAt: utc(r.createdAt),
+        updatedAt: utc(r.updatedAt),
         deleted: r.deleted,
       });
     }
@@ -275,8 +294,8 @@ export function parseBundle(bytes: Uint8Array):
       title: manifest.project.title,
       audioId: manifest.audio.id,
       schemaVersion: manifest.schemaVersion,
-      createdAt: manifest.project.createdAt,
-      updatedAt: manifest.project.updatedAt,
+      createdAt: utc(manifest.project.createdAt),
+      updatedAt: utc(manifest.project.updatedAt),
     },
     audio: {
       id: manifest.audio.id,

@@ -38,7 +38,7 @@ export function ImportExportControls(): ReactNode {
     if (result) {
       setMessage(
         `Imported. ${result.added} new item(s)` +
-          (result.conflicts > 0 ? `, ${result.conflicts} conflict(s) flagged.` : '.'),
+          (result.updated > 0 ? `, ${result.updated} updated.` : '.'),
       );
     }
   };

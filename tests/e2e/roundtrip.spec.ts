@@ -213,5 +213,33 @@ test.describe('roundtrip', () => {
       await app.waveform.waitUntilReady();
       await expect(app.page.getByText('No annotations yet.')).toBeVisible();
     });
+
+    test('a newer edit in the incoming bundle replaces the older local copy', async ({ app }) => {
+      const later = new Date(Date.parse(now) + 60_000).toISOString();
+      const modified = makeFullProject({
+        project: original.project,
+        audio: original.audio,
+        annotations: original.annotations.map((a) => ({
+          ...a,
+          note: 'Edited by its author',
+          updatedAt: later,
+        })),
+        replies: [],
+      });
+
+      await app.importExport.importBundle({
+        name: 'b.aaz',
+        mimeType: 'application/zip',
+        buffer: await buildValidBundle(modified, audioBytes),
+      });
+
+      await expect(app.importExport.message()).toContainText('1 updated');
+      await expect(app.annotations.itemByNote('Edited by its author').locator()).toBeVisible();
+      await expect(app.annotations.itemByNote('Original note').locator()).toHaveCount(0);
+
+      await app.page.reload();
+      await app.waveform.waitUntilReady();
+      await expect(app.annotations.itemByNote('Edited by its author').locator()).toBeVisible();
+    });
   });
 });
