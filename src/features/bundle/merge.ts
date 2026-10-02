@@ -26,7 +26,9 @@ function mergeItem<T extends Mergeable>(local: T, incoming: T): { item: T; chang
   // hand-edited. Ignore it, delete included.
   if (incoming.authorId !== local.authorId) return { item: local, changed: false };
   // Equal timestamps keep local: they can only differ in content if a bundle was hand-edited.
-  const newer = incoming.updatedAt > local.updatedAt ? incoming : local;
+  // Parse rather than compare strings: a record stored before import rewrote timestamps in
+  // UTC may carry an offset.
+  const newer = Date.parse(incoming.updatedAt) > Date.parse(local.updatedAt) ? incoming : local;
   if (local.deleted || incoming.deleted) {
     return { item: { ...newer, deleted: true }, changed: !local.deleted || newer !== local };
   }

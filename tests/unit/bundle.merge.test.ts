@@ -124,6 +124,21 @@ describe('merge', () => {
     expect(outcome.updated.annotations).toBe(0);
   });
 
+  it('compares times, not strings, when a stored timestamp has an offset', () => {
+    // An import from before timestamps were rewritten in UTC could have stored this.
+    const local = makeBase();
+    local.annotations[0] = { ...local.annotations[0], updatedAt: '2026-09-29T10:30:00+01:00' };
+    const incoming = makeBase();
+    incoming.annotations[0] = {
+      ...incoming.annotations[0],
+      note: 'Edited later',
+      updatedAt: '2026-09-29T10:00:00.000Z',
+    };
+    const outcome = merge(local, incoming);
+    expect(outcome.project.annotations[0].note).toBe('Edited later');
+    expect(outcome.updated.annotations).toBe(1);
+  });
+
   it('ignores a newer copy that claims a different author', () => {
     const local = makeBase();
     const edited = makeBase();

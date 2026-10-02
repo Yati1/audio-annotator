@@ -175,7 +175,7 @@ function allTimestampsValid(m: Manifest): boolean {
 }
 
 /**
- * Merge and sorting compare timestamps as strings, which only orders them correctly in one
+ * Sorting compares timestamps as strings, which only orders them correctly in one
  * form: UTC with milliseconds, as `toISOString` writes. A foreign bundle could say
  * `10:30:00+01:00`, which sorts after `10:00:00.000Z` though it is earlier.
  */
