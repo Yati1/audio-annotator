@@ -361,7 +361,10 @@ export const useStore = create<AppState>((set, get) => ({
       set({ status: 'ready' });
       return null;
     }
-    const outcome = merge(sameOriginal, incoming);
+    // Opening another file leaves the old project in storage. If the bundle is that
+    // project, merge with the stored copy, or its newer edits and deletions are lost.
+    const local = sameOriginal ?? (await loadStoredProject(incoming.project.id))?.full ?? null;
+    const outcome = merge(local, incoming);
     // Null the project first, as newProject does, so in-flight writes bail.
     if (replacing) set({ project: null });
 
@@ -382,7 +385,7 @@ export const useStore = create<AppState>((set, get) => ({
       if (replacing) await storage.deleteProject(replacing.project.id);
     } catch {
       // Don't leave a half-written new project for the next start to open.
-      if (!sameOriginal) await storage.deleteProject(incoming.project.id).catch(() => {});
+      if (!local) await storage.deleteProject(incoming.project.id).catch(() => {});
       set({
         project: current?.project ?? null,
         status: current ? 'ready' : 'idle',
@@ -525,7 +528,15 @@ async function restoreLatestProject(): Promise<{ full: FullProject; objectUrl: s
   const [latest] = await storage.listProjects();
   if (!latest) return null;
 
-  const project = await storage.getProject(latest.id);
+  const stored = await loadStoredProject(latest.id);
+  if (!stored) return null;
+
+  return { full: stored.full, objectUrl: URL.createObjectURL(stored.blob) };
+}
+
+/** A project as stored, deleted annotations included, with its audio blob. */
+async function loadStoredProject(id: string): Promise<{ full: FullProject; blob: Blob } | null> {
+  const project = await storage.getProject(id);
   if (!project) return null;
 
   const audioRecord = await storage.getAudio(project.audioId);
@@ -538,9 +549,8 @@ async function restoreLatestProject(): Promise<{ full: FullProject; objectUrl: s
     durationSec: audioRecord.durationSec,
     byteSize: audioRecord.byteSize,
   };
-  const objectUrl = URL.createObjectURL(audioRecord.blob);
 
-  return { full: { project, audio, ...(await loadRecords(project.id)) }, objectUrl };
+  return { full: { project, audio, ...(await loadRecords(project.id)) }, blob: audioRecord.blob };
 }
 
 /**
