@@ -6,6 +6,8 @@ import { Empty } from './states/States';
 interface AnnotationListProps {
   annotations: Annotation[];
   repliesByAnnotation: Record<string, Reply[]>;
+  /** This device's author id; only items carrying it get edit/delete controls. */
+  myAuthorId: string;
   selectedId: string | null;
   /** Id of the annotation currently being played back, if any. */
   playingId: string | null;
@@ -22,6 +24,7 @@ interface AnnotationListProps {
 export function AnnotationList({
   annotations,
   repliesByAnnotation,
+  myAuthorId,
   selectedId,
   playingId,
   onSelect,
@@ -65,6 +68,7 @@ export function AnnotationList({
           key={a.id}
           annotation={a}
           replies={repliesByAnnotation[a.id] ?? []}
+          myAuthorId={myAuthorId}
           selected={a.id === selectedId}
           playing={a.id === playingId}
           onSelect={() => onSelect(a.id)}

@@ -4,6 +4,8 @@ import { safeAuthorColor } from '../lib/color';
 
 interface ReplyThreadProps {
   replies: Reply[];
+  /** This device's author id; only replies carrying it get edit/delete controls. */
+  myAuthorId: string;
   onAdd(text: string): void;
   onEdit(replyId: string, text: string): void;
   onDelete(replyId: string): void;
@@ -14,8 +16,14 @@ function replyTime(iso: string): string {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleString();
 }
 
-/** Chronological reply thread with add/edit/delete (FR-013, FR-014, FR-015). */
-export function ReplyThread({ replies, onAdd, onEdit, onDelete }: ReplyThreadProps): ReactNode {
+/** Chronological reply thread with add, plus edit/delete on your own replies (FR-013–FR-015). */
+export function ReplyThread({
+  replies,
+  myAuthorId,
+  onAdd,
+  onEdit,
+  onDelete,
+}: ReplyThreadProps): ReactNode {
   const [text, setText] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
@@ -53,7 +61,7 @@ export function ReplyThread({ replies, onAdd, onEdit, onDelete }: ReplyThreadPro
                   </span>
                   <time dateTime={r.createdAt}>{replyTime(r.createdAt)}</time>
                 </div>
-                {editingId === r.id ? (
+                {editingId === r.id && r.authorId === myAuthorId ? (
                   <div className="reply-edit">
                     <input value={editDraft} onChange={(e) => setEditDraft(e.target.value)} />
                     <button
@@ -75,28 +83,30 @@ export function ReplyThread({ replies, onAdd, onEdit, onDelete }: ReplyThreadPro
                 ) : (
                   <div className="reply-body">
                     <span>{r.text}</span>
-                    <span className="reply-actions">
-                      <button
-                        type="button"
-                        aria-label="Edit reply"
-                        onClick={() => {
-                          setEditingId(r.id);
-                          setEditDraft(r.text);
-                        }}
-                      >
-                        ✎
-                      </button>
-                      <button
-                        type="button"
-                        className="danger"
-                        aria-label="Delete reply"
-                        onClick={() => {
-                          if (window.confirm('Delete this reply?')) onDelete(r.id);
-                        }}
-                      >
-                        🗑
-                      </button>
-                    </span>
+                    {r.authorId === myAuthorId && (
+                      <span className="reply-actions">
+                        <button
+                          type="button"
+                          aria-label="Edit reply"
+                          onClick={() => {
+                            setEditingId(r.id);
+                            setEditDraft(r.text);
+                          }}
+                        >
+                          ✎
+                        </button>
+                        <button
+                          type="button"
+                          className="danger"
+                          aria-label="Delete reply"
+                          onClick={() => {
+                            if (window.confirm('Delete this reply?')) onDelete(r.id);
+                          }}
+                        >
+                          🗑
+                        </button>
+                      </span>
+                    )}
                   </div>
                 )}
               </li>

@@ -7,6 +7,8 @@ import { ReplyThread } from './ReplyThread';
 interface AnnotationItemProps {
   annotation: Annotation;
   replies: Reply[];
+  /** This device's author id; edit/delete show only when it matches the item's. */
+  myAuthorId: string;
   selected: boolean;
   /** True while this annotation is the one currently being played back. */
   playing: boolean;
@@ -23,6 +25,7 @@ interface AnnotationItemProps {
 export function AnnotationItem({
   annotation,
   replies,
+  myAuthorId,
   selected,
   playing,
   onSelect,
@@ -38,6 +41,7 @@ export function AnnotationItem({
   const [draft, setDraft] = useState(annotation.note);
 
   const activeReplies = replies.filter((r) => !r.deleted);
+  const mine = annotation.authorId === myAuthorId;
   const authorColor = safeAuthorColor(annotation.authorColor);
   const timeLabel =
     annotation.kind === 'region'
@@ -93,21 +97,25 @@ export function AnnotationItem({
           >
             {playing ? '■' : '►'}
           </button>
-          <button type="button" onClick={() => setEditing((e) => !e)} aria-label="Edit note">
-            ✎
-          </button>
-          <button
-            type="button"
-            className="danger"
-            onClick={confirmDelete}
-            aria-label="Delete annotation"
-          >
-            🗑
-          </button>
+          {mine && (
+            <>
+              <button type="button" onClick={() => setEditing((e) => !e)} aria-label="Edit note">
+                ✎
+              </button>
+              <button
+                type="button"
+                className="danger"
+                onClick={confirmDelete}
+                aria-label="Delete annotation"
+              >
+                🗑
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {editing ? (
+      {editing && mine ? (
         <div className="annotation-edit">
           <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={2} />
           <div className="row-actions">
@@ -125,6 +133,7 @@ export function AnnotationItem({
 
       <ReplyThread
         replies={activeReplies}
+        myAuthorId={myAuthorId}
         onAdd={onAddReply}
         onEdit={onEditReply}
         onDelete={onDeleteReply}

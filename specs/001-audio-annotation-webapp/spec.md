@@ -176,7 +176,8 @@ audio, annotations, and threads are restored intact.
 - **FR-014**: System MUST display replies in chronological order with each reply's author
   and time posted.
 - **FR-015**: Users MUST be able to edit and delete replies they authored, with the
-  thread updating accordingly.
+  thread updating accordingly. The same holds for annotations (FR-008, FR-009): only the
+  device whose `authorId` an item carries can edit or delete it. Anyone can still reply.
 - **FR-016**: System MUST persist reply threads locally on the user's device so they are
   present when the app is reopened.
 

@@ -90,6 +90,14 @@ export class AnnotationItemHandle {
     await this.root.locator('.annotation-edit').getByRole('button', { name: 'Cancel' }).click();
   }
 
+  editButton(): Locator {
+    return this.root.getByRole('button', { name: 'Edit note' });
+  }
+
+  deleteButton(): Locator {
+    return this.root.getByRole('button', { name: 'Delete annotation' });
+  }
+
   /** Clicks Delete. Arm a confirm handler on the page first (see AppPage). */
   async delete(): Promise<void> {
     await this.root.getByRole('button', { name: 'Delete annotation' }).click();

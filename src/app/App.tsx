@@ -24,6 +24,7 @@ export function App(): ReactNode {
   const annotations = useStore((s) => s.annotations);
   const repliesByAnnotation = useStore((s) => s.repliesByAnnotation);
   const authorColor = useStore((s) => s.authorColor);
+  const authorId = useStore((s) => s.authorId);
 
   const init = useStore((s) => s.init);
   const loadAudioFile = useStore((s) => s.loadAudioFile);
@@ -279,6 +280,7 @@ export function App(): ReactNode {
             <AnnotationList
               annotations={annotations}
               repliesByAnnotation={repliesByAnnotation}
+              myAuthorId={authorId}
               selectedId={selectedId}
               playingId={playingAnnotationId}
               onSelect={setSelectedId}
