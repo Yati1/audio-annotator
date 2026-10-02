@@ -33,8 +33,13 @@ export function ImportExportControls(): ReactNode {
     if (!file) return;
     setBusy(true);
     setMessage(null);
-    const result = await importBundle(file);
-    setBusy(false);
+    const result = await importBundle(file, (currentTitle) =>
+      window.confirm(
+        `Open this bundle? It will replace "${currentTitle}" and delete it from this ` +
+          'browser, with all its annotations and replies. This cannot be undone. ' +
+          'Export it first if you want to keep a copy.',
+      ),
+    ).finally(() => setBusy(false));
     if (result) {
       setMessage(
         `Imported. ${result.added} new item(s)` +

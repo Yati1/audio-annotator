@@ -60,7 +60,12 @@ export interface AppState {
   // used by import (US3)
   setLoadedProject(full: FullProject, objectUrl: string): void;
   exportBundle(): Promise<Blob | null>;
-  importBundle(file: File): Promise<{ added: number; updated: number } | null>;
+  /** `confirmReplace` is asked, with the open project's title, before a bundle for a
+   *  different project replaces it; returning false cancels the import (FR-023). */
+  importBundle(
+    file: File,
+    confirmReplace?: (currentTitle: string) => boolean,
+  ): Promise<{ added: number; updated: number } | null>;
 }
 
 const LARGE_FILE_BYTES = 150 * 1024 * 1024;
@@ -332,7 +337,7 @@ export const useStore = create<AppState>((set, get) => ({
     return exportBundle(full, bytes);
   },
 
-  async importBundle(file) {
+  async importBundle(file, confirmReplace) {
     set({ status: 'loading', error: null, notice: null });
     let bytes: Uint8Array;
     try {
@@ -351,20 +356,43 @@ export const useStore = create<AppState>((set, get) => ({
     const { full: incoming, audioBlob } = parsed.result;
     const current = await loadOpenProject(get);
     const sameOriginal = current?.project.id === incoming.project.id ? current : null;
-    const outcome = merge(sameOriginal, incoming);
+    const replacing = current && !sameOriginal ? current : null;
+    if (replacing && confirmReplace && !confirmReplace(replacing.project.title)) {
+      set({ status: 'ready' });
+      return null;
+    }
+    // Opening another file leaves the old project in storage. If the bundle is that
+    // project, merge with the stored copy, or its newer edits and deletions are lost.
+    const local = sameOriginal ?? (await loadStoredProject(incoming.project.id))?.full ?? null;
+    const outcome = merge(local, incoming);
+    // Null the project first, as newProject does, so in-flight writes bail.
+    if (replacing) set({ project: null });
 
-    // Persist audio, project, and merged records.
-    await storage.putAudio({
-      id: incoming.audio.id,
-      fileName: incoming.audio.fileName,
-      mimeType: incoming.audio.mimeType,
-      durationSec: incoming.audio.durationSec,
-      byteSize: incoming.audio.byteSize,
-      blob: audioBlob,
-    });
-    await storage.putProject(outcome.project.project);
-    await storage.putAnnotations(outcome.project.annotations);
-    await storage.putReplies(outcome.project.replies);
+    try {
+      await storage.putAudio({
+        id: incoming.audio.id,
+        fileName: incoming.audio.fileName,
+        mimeType: incoming.audio.mimeType,
+        durationSec: incoming.audio.durationSec,
+        byteSize: incoming.audio.byteSize,
+        blob: audioBlob,
+      });
+      await storage.putProject(outcome.project.project);
+      await storage.putAnnotations(outcome.project.annotations);
+      await storage.putReplies(outcome.project.replies);
+      // Replacing, not merging: delete the old project so it can't linger unseen in
+      // storage. Only now, so a failed save above leaves it intact (FR-026).
+      if (replacing) await storage.deleteProject(replacing.project.id);
+    } catch {
+      // Don't leave a half-written new project for the next start to open.
+      if (!local) await storage.deleteProject(incoming.project.id).catch(() => {});
+      set({
+        project: current?.project ?? null,
+        status: current ? 'ready' : 'idle',
+        error: 'Could not save the imported project.',
+      });
+      return null;
+    }
 
     const objectUrl = URL.createObjectURL(audioBlob);
     get().setLoadedProject(outcome.project, objectUrl);
@@ -500,7 +528,15 @@ async function restoreLatestProject(): Promise<{ full: FullProject; objectUrl: s
   const [latest] = await storage.listProjects();
   if (!latest) return null;
 
-  const project = await storage.getProject(latest.id);
+  const stored = await loadStoredProject(latest.id);
+  if (!stored) return null;
+
+  return { full: stored.full, objectUrl: URL.createObjectURL(stored.blob) };
+}
+
+/** A project as stored, deleted annotations included, with its audio blob. */
+async function loadStoredProject(id: string): Promise<{ full: FullProject; blob: Blob } | null> {
+  const project = await storage.getProject(id);
   if (!project) return null;
 
   const audioRecord = await storage.getAudio(project.audioId);
@@ -513,9 +549,8 @@ async function restoreLatestProject(): Promise<{ full: FullProject; objectUrl: s
     durationSec: audioRecord.durationSec,
     byteSize: audioRecord.byteSize,
   };
-  const objectUrl = URL.createObjectURL(audioRecord.blob);
 
-  return { full: { project, audio, ...(await loadRecords(project.id)) }, objectUrl };
+  return { full: { project, audio, ...(await loadRecords(project.id)) }, blob: audioRecord.blob };
 }
 
 /**
