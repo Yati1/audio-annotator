@@ -119,4 +119,44 @@ describe('store: importing a different project over the open one (FR-023)', () =
     expect(result).not.toBeNull();
     expect(useStore.getState().project?.id).toBe('p-open');
   });
+
+  describe('when storage already holds the incoming project, not open', () => {
+    // An older copy of 'p-stored' in the bundle; storage has a newer edit of one note
+    // and a deletion of the other, as left when the user opened another file.
+    const older = '2026-09-01T00:00:00.000Z';
+    const newer = '2026-09-02T00:00:00.000Z';
+    const bundled = makeFull('p-stored', 'a-stored', 'Stored project');
+    bundled.annotations = [
+      { ...bundled.annotations[0], id: 'an-edited', note: 'Old note', updatedAt: older },
+      { ...bundled.annotations[0], id: 'an-deleted', note: 'Deleted note', updatedAt: older },
+    ];
+
+    beforeEach(async () => {
+      await storage.putProject(bundled.project);
+      await storage.putAudio({ ...bundled.audio, blob: new Blob(['x']) });
+      await storage.putAnnotations([
+        { ...bundled.annotations[0], note: 'New note', updatedAt: newer },
+        { ...bundled.annotations[1], deleted: true, updatedAt: newer },
+      ]);
+    });
+
+    it('merges with the stored copy, keeping its newer edit and its deletion', async () => {
+      const result = await useStore.getState().importBundle(await bundleFile(bundled), () => true);
+
+      expect(result).toEqual({ added: 0, updated: 0 });
+      const stored = await storage.listAnnotations('p-stored');
+      expect(stored.find((a) => a.id === 'an-edited')?.note).toBe('New note');
+      expect(stored.find((a) => a.id === 'an-deleted')?.deleted).toBe(true);
+    });
+
+    it('keeps the stored copy when saving fails (FR-026)', async () => {
+      vi.spyOn(storage, 'putAnnotations').mockRejectedValueOnce(new Error('QuotaExceededError'));
+
+      const result = await useStore.getState().importBundle(await bundleFile(bundled), () => true);
+
+      expect(result).toBeNull();
+      expect(await storage.getProject('p-stored')).toBeDefined();
+      expect(await storage.listAnnotations('p-stored')).toHaveLength(2);
+    });
+  });
 });
