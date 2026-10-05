@@ -110,6 +110,7 @@ export interface StoragePort {
   putAudio(a: AudioRecord): Promise<void>;
   getAudio(id: string): Promise<AudioRecord | undefined>;
   getAudioBlob(id: string): Promise<Blob | undefined>;
+  deleteAudio(id: string): Promise<void>;
   putAnnotations(items: Annotation[]): Promise<void>;
   listAnnotations(projectId: string): Promise<Annotation[]>;
   putReplies(items: Reply[]): Promise<void>;
@@ -147,7 +148,11 @@ export const storage: StoragePort = {
     const project = await tx.objectStore('projects').get(id);
     const annotations = await tx.objectStore('annotations').index('projectId').getAll(id);
     await tx.objectStore('projects').delete(id);
-    if (project) await tx.objectStore('audio').delete(project.audioId);
+    // Keep audio another project still uses.
+    const others = await tx.objectStore('projects').getAll();
+    if (project && !others.some((p) => p.audioId === project.audioId)) {
+      await tx.objectStore('audio').delete(project.audioId);
+    }
     for (const a of annotations) {
       await tx.objectStore('annotations').delete(a.id);
       const replies = await tx.objectStore('replies').index('annotationId').getAll(a.id);
@@ -170,6 +175,11 @@ export const storage: StoragePort = {
     const db = await getDb();
     const rec = await db.get('audio', id);
     return rec?.blob;
+  },
+
+  async deleteAudio(id) {
+    const db = await getDb();
+    await db.delete('audio', id);
   },
 
   async putAnnotations(items) {

@@ -60,7 +60,12 @@ export interface AppState {
   // used by import (US3)
   setLoadedProject(full: FullProject, objectUrl: string): void;
   exportBundle(): Promise<Blob | null>;
-  importBundle(file: File): Promise<{ added: number; updated: number } | null>;
+  /** `confirmReplace` is asked, with the open project's title, before a bundle for a
+   *  different project replaces it; returning false cancels the import (FR-023). */
+  importBundle(
+    file: File,
+    confirmReplace: (currentTitle: string) => boolean,
+  ): Promise<{ added: number; updated: number } | null>;
 }
 
 const LARGE_FILE_BYTES = 150 * 1024 * 1024;
@@ -332,7 +337,7 @@ export const useStore = create<AppState>((set, get) => ({
     return exportBundle(full, bytes);
   },
 
-  async importBundle(file) {
+  async importBundle(file, confirmReplace) {
     set({ status: 'loading', error: null, notice: null });
     let bytes: Uint8Array;
     try {
@@ -349,22 +354,51 @@ export const useStore = create<AppState>((set, get) => ({
     }
 
     const { full: incoming, audioBlob } = parsed.result;
-    const current = await loadOpenProject(get);
-    const sameOriginal = current?.project.id === incoming.project.id ? current : null;
-    const outcome = merge(sameOriginal, incoming);
+    const target = await loadImportTarget(get, incoming).catch(() => null);
+    if (!target) {
+      set({ status: get().project ? 'ready' : 'idle', error: 'Could not read local data.' });
+      return null;
+    }
+    const { current, sameOriginal, local, priorAudio } = target;
+    const replacing = current && !sameOriginal ? current : null;
+    if (replacing && !confirmReplace(replacing.project.title)) {
+      set({ status: 'ready' });
+      return null;
+    }
+    const outcome = merge(local, incoming);
+    // Null the project first, as newProject does, so in-flight writes bail.
+    if (replacing) set({ project: null });
 
-    // Persist audio, project, and merged records.
-    await storage.putAudio({
-      id: incoming.audio.id,
-      fileName: incoming.audio.fileName,
-      mimeType: incoming.audio.mimeType,
-      durationSec: incoming.audio.durationSec,
-      byteSize: incoming.audio.byteSize,
-      blob: audioBlob,
-    });
-    await storage.putProject(outcome.project.project);
-    await storage.putAnnotations(outcome.project.annotations);
-    await storage.putReplies(outcome.project.replies);
+    try {
+      await storage.putAudio({
+        id: incoming.audio.id,
+        fileName: incoming.audio.fileName,
+        mimeType: incoming.audio.mimeType,
+        durationSec: incoming.audio.durationSec,
+        byteSize: incoming.audio.byteSize,
+        blob: audioBlob,
+      });
+      await storage.putProject(outcome.project.project);
+      await storage.putAnnotations(outcome.project.annotations);
+      await storage.putReplies(outcome.project.replies);
+      // Replacing, not merging: delete the old project so it can't linger unseen in
+      // storage. Only now, so a failed save above leaves it intact (FR-026).
+      if (replacing) await storage.deleteProject(replacing.project.id);
+    } catch {
+      // Undo the audio write: put back the record another project uses, or drop the
+      // new one so its blob doesn't sit in storage with no project.
+      await (
+        priorAudio ? storage.putAudio(priorAudio) : storage.deleteAudio(incoming.audio.id)
+      ).catch(() => {});
+      // Don't leave a half-written new project for the next start to open.
+      if (!local) await storage.deleteProject(incoming.project.id).catch(() => {});
+      set({
+        project: current?.project ?? null,
+        status: current ? 'ready' : 'idle',
+        error: 'Could not save the imported project.',
+      });
+      return null;
+    }
 
     const objectUrl = URL.createObjectURL(audioBlob);
     get().setLoadedProject(outcome.project, objectUrl);
@@ -500,7 +534,27 @@ async function restoreLatestProject(): Promise<{ full: FullProject; objectUrl: s
   const [latest] = await storage.listProjects();
   if (!latest) return null;
 
-  const project = await storage.getProject(latest.id);
+  const stored = await loadStoredProject(latest.id);
+  if (!stored) return null;
+
+  return { full: stored.full, objectUrl: URL.createObjectURL(stored.blob) };
+}
+
+/** What an import may merge with, replace or overwrite, read before anything is saved. */
+async function loadImportTarget(get: () => AppState, incoming: FullProject) {
+  const current = await loadOpenProject(get);
+  const sameOriginal = current?.project.id === incoming.project.id ? current : null;
+  // Opening another file leaves the old project in storage. If the bundle is that
+  // project, merge with the stored copy, or its newer edits and deletions are lost.
+  const local = sameOriginal ?? (await loadStoredProject(incoming.project.id))?.full ?? null;
+  // A failed save puts this back, since another project may still use it.
+  const priorAudio = await storage.getAudio(incoming.audio.id);
+  return { current, sameOriginal, local, priorAudio };
+}
+
+/** A project as stored, deleted annotations included, with its audio blob. */
+async function loadStoredProject(id: string): Promise<{ full: FullProject; blob: Blob } | null> {
+  const project = await storage.getProject(id);
   if (!project) return null;
 
   const audioRecord = await storage.getAudio(project.audioId);
@@ -513,9 +567,8 @@ async function restoreLatestProject(): Promise<{ full: FullProject; objectUrl: s
     durationSec: audioRecord.durationSec,
     byteSize: audioRecord.byteSize,
   };
-  const objectUrl = URL.createObjectURL(audioRecord.blob);
 
-  return { full: { project, audio, ...(await loadRecords(project.id)) }, objectUrl };
+  return { full: { project, audio, ...(await loadRecords(project.id)) }, blob: audioRecord.blob };
 }
 
 /**

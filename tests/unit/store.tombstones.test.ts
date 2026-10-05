@@ -62,7 +62,7 @@ describe('store: a deleted annotation stays deleted', () => {
   });
 
   it('when an older bundle still has it', async () => {
-    const result = await useStore.getState().importBundle(await bundleFile(original));
+    const result = await useStore.getState().importBundle(await bundleFile(original), () => true);
 
     expect(result).toEqual({ added: 0, updated: 0 });
     expect(useStore.getState().annotations).toEqual([]);
