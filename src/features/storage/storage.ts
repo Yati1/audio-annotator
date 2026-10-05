@@ -110,6 +110,7 @@ export interface StoragePort {
   putAudio(a: AudioRecord): Promise<void>;
   getAudio(id: string): Promise<AudioRecord | undefined>;
   getAudioBlob(id: string): Promise<Blob | undefined>;
+  deleteAudio(id: string): Promise<void>;
   putAnnotations(items: Annotation[]): Promise<void>;
   listAnnotations(projectId: string): Promise<Annotation[]>;
   putReplies(items: Reply[]): Promise<void>;
@@ -174,6 +175,11 @@ export const storage: StoragePort = {
     const db = await getDb();
     const rec = await db.get('audio', id);
     return rec?.blob;
+  },
+
+  async deleteAudio(id) {
+    const db = await getDb();
+    await db.delete('audio', id);
   },
 
   async putAnnotations(items) {

@@ -110,6 +110,41 @@ describe('store: importing a different project over the open one (FR-023)', () =
     expect(await storage.getAudio('a-open')).toBeDefined();
   });
 
+  it('puts back shared audio when saving the new project fails (FR-026)', async () => {
+    vi.spyOn(storage, 'putAnnotations').mockRejectedValueOnce(new Error('QuotaExceededError'));
+    const theirs = makeFull('p-new', 'a-open', 'New project');
+    theirs.audio = { ...theirs.audio, fileName: 'theirs.mp3' };
+
+    const result = await useStore.getState().importBundle(await bundleFile(theirs), () => true);
+
+    expect(result).toBeNull();
+    expect((await storage.getAudio('a-open'))?.fileName).toBe('t.mp3');
+  });
+
+  it('leaves no audio behind when saving the new project fails', async () => {
+    vi.spyOn(storage, 'putProject').mockRejectedValueOnce(new Error('QuotaExceededError'));
+
+    const result = await useStore
+      .getState()
+      .importBundle(await bundleFile(makeFull('p-new', 'a-new', 'New project')), () => true);
+
+    expect(result).toBeNull();
+    expect(await storage.getAudio('a-new')).toBeUndefined();
+  });
+
+  it('shows an error, not a spinner, when reading local data fails', async () => {
+    vi.spyOn(storage, 'listAnnotations').mockRejectedValueOnce(new Error('UnknownError'));
+
+    const result = await useStore
+      .getState()
+      .importBundle(await bundleFile(makeFull('p-new', 'a-new', 'New project')), () => true);
+
+    expect(result).toBeNull();
+    expect(useStore.getState().status).toBe('ready');
+    expect(useStore.getState().error).toBe('Could not read local data.');
+    expect(useStore.getState().project?.id).toBe('p-open');
+  });
+
   it('does not ask when the bundle is the same project', async () => {
     const confirmReplace = vi.fn(() => false);
 

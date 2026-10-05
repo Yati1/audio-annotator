@@ -64,7 +64,7 @@ export interface AppState {
    *  different project replaces it; returning false cancels the import (FR-023). */
   importBundle(
     file: File,
-    confirmReplace?: (currentTitle: string) => boolean,
+    confirmReplace: (currentTitle: string) => boolean,
   ): Promise<{ added: number; updated: number } | null>;
 }
 
@@ -354,16 +354,17 @@ export const useStore = create<AppState>((set, get) => ({
     }
 
     const { full: incoming, audioBlob } = parsed.result;
-    const current = await loadOpenProject(get);
-    const sameOriginal = current?.project.id === incoming.project.id ? current : null;
+    const target = await loadImportTarget(get, incoming).catch(() => null);
+    if (!target) {
+      set({ status: get().project ? 'ready' : 'idle', error: 'Could not read local data.' });
+      return null;
+    }
+    const { current, sameOriginal, local, priorAudio } = target;
     const replacing = current && !sameOriginal ? current : null;
-    if (replacing && confirmReplace && !confirmReplace(replacing.project.title)) {
+    if (replacing && !confirmReplace(replacing.project.title)) {
       set({ status: 'ready' });
       return null;
     }
-    // Opening another file leaves the old project in storage. If the bundle is that
-    // project, merge with the stored copy, or its newer edits and deletions are lost.
-    const local = sameOriginal ?? (await loadStoredProject(incoming.project.id))?.full ?? null;
     const outcome = merge(local, incoming);
     // Null the project first, as newProject does, so in-flight writes bail.
     if (replacing) set({ project: null });
@@ -384,6 +385,11 @@ export const useStore = create<AppState>((set, get) => ({
       // storage. Only now, so a failed save above leaves it intact (FR-026).
       if (replacing) await storage.deleteProject(replacing.project.id);
     } catch {
+      // Undo the audio write: put back the record another project uses, or drop the
+      // new one so its blob doesn't sit in storage with no project.
+      await (
+        priorAudio ? storage.putAudio(priorAudio) : storage.deleteAudio(incoming.audio.id)
+      ).catch(() => {});
       // Don't leave a half-written new project for the next start to open.
       if (!local) await storage.deleteProject(incoming.project.id).catch(() => {});
       set({
@@ -532,6 +538,18 @@ async function restoreLatestProject(): Promise<{ full: FullProject; objectUrl: s
   if (!stored) return null;
 
   return { full: stored.full, objectUrl: URL.createObjectURL(stored.blob) };
+}
+
+/** What an import may merge with, replace or overwrite, read before anything is saved. */
+async function loadImportTarget(get: () => AppState, incoming: FullProject) {
+  const current = await loadOpenProject(get);
+  const sameOriginal = current?.project.id === incoming.project.id ? current : null;
+  // Opening another file leaves the old project in storage. If the bundle is that
+  // project, merge with the stored copy, or its newer edits and deletions are lost.
+  const local = sameOriginal ?? (await loadStoredProject(incoming.project.id))?.full ?? null;
+  // A failed save puts this back, since another project may still use it.
+  const priorAudio = await storage.getAudio(incoming.audio.id);
+  return { current, sameOriginal, local, priorAudio };
 }
 
 /** A project as stored, deleted annotations included, with its audio blob. */

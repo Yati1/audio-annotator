@@ -35,10 +35,11 @@ interface StoragePort {
   putProject(p: Project): Promise<void>;
   getProject(id: string): Promise<Project | undefined>;
   listProjects(): Promise<ProjectSummary[]>;
-  deleteProject(id: string): Promise<void>; // cascades audio/annotations/replies
+  deleteProject(id: string): Promise<void>; // cascades annotations/replies, and audio no other project uses
 
   putAudio(a: AudioRecord): Promise<void>; // includes Blob
   getAudioBlob(id: string): Promise<Blob | undefined>;
+  deleteAudio(id: string): Promise<void>;
 
   putAnnotations(items: Annotation[]): Promise<void>;
   listAnnotations(projectId: string): Promise<Annotation[]>; // ordered by createdAt
