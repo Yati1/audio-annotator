@@ -133,8 +133,9 @@ audio, annotations, and threads are restored intact.
   changes back? On import, the system MUST reconcile the bundles by merging annotations
   and replies by their unique IDs (union), so no side's contributions are lost.
 - What happens when the same annotation or reply ID exists on both sides with different
-  edited content at merge time? The system MUST resolve the conflict without silently
-  discarding either version (e.g., keep both or flag the conflict) rather than losing data.
+  edited content at merge time? Only the author's device can edit an item (FR-015), so
+  the two can only be an older and a newer version of the author's own work. The system
+  MUST keep the newer one (by `updatedAt`); a deletion on either side wins.
 - What happens when an annotation with an active reply thread is deleted? The system MUST
   warn that the discussion will be removed and require confirmation.
 

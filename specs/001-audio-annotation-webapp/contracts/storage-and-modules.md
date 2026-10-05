@@ -121,7 +121,8 @@ interface BundleService {
 type MergeOutcome = {
   project: FullProject;
   added: { annotations: number; replies: number };
-  conflicts: Array<{ kind: 'annotation' | 'reply'; id: string }>; // divergent same-id edits
+  /** Local items replaced by a newer or deleted incoming version. */
+  updated: { annotations: number; replies: number };
 };
 ```
 
@@ -131,10 +132,10 @@ Pure function, deterministic, unit-tested:
 
 - Union by `id` for annotations and replies.
 - Same `id` present in both:
-  - if either side `deleted` ⇒ result is `deleted` (tombstone wins, no resurrection);
-  - else if content equal ⇒ keep one;
-  - else (divergent edits) ⇒ keep both by preserving the local and recording the incoming
-    as a flagged conflict (no silent overwrite — spec edge case).
+  - if the incoming copy names a different `authorId` ⇒ keep local (only the author's
+    device can change an item, FR-015, so that copy was hand-edited);
+  - else if either side `deleted` ⇒ result is `deleted` (tombstone wins, no resurrection);
+  - else the newer `updatedAt` wins; a tie keeps local.
 - New `id` on either side ⇒ include.
 - `ImportError` mirrors the bundle-format taxonomy (`E_NOT_ZIP`, `E_NO_MANIFEST`,
   `E_NO_AUDIO`, `E_SCHEMA`, `E_VERSION`, `E_AUDIO_TYPE`). On any error, local data is

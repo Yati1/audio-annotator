@@ -123,11 +123,12 @@ import bundle:
   if project.id already local-> merge by unique ID (union):
        annotations/replies:  add unseen ids; keep existing;
        same id, both present:
+           if incoming names another authorId -> keep local
            if one deleted     -> deleted wins (tombstone)
-           else if content differs -> keep both / flag conflict (no silent loss)
+           else               -> newer updatedAt wins; a tie keeps local
 ```
 
-Merge is deterministic and depends only on `id` + `deleted` + content equality, making it
+Merge is deterministic and depends only on `id`, `authorId`, `deleted` and `updatedAt`, making it
 unit-testable (Constitution II). See [contracts/storage-and-modules.md](contracts/storage-and-modules.md)
 for the `mergeProject` contract and [contracts/bundle-format.md](contracts/bundle-format.md)
 for serialization.
