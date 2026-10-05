@@ -64,6 +64,18 @@ describe('store: only the author may edit or delete (FR-015)', () => {
     expect(useStore.getState().annotations).toEqual([theirs]);
   });
 
+  it('says why it refuses an edit, as the false result promises', async () => {
+    const theirs = point(otherAuthorId, 'theirs');
+    useStore.setState({ annotations: [theirs], error: null });
+
+    expect(await useStore.getState().editAnnotation(theirs.id, { note: 'changed' })).toBe(false);
+    expect(useStore.getState().error).toBe('Only its author can edit this annotation.');
+
+    useStore.setState({ error: null });
+    expect(await useStore.getState().editAnnotation('gone', { note: 'changed' })).toBe(false);
+    expect(useStore.getState().error).toBe('This annotation no longer exists.');
+  });
+
   it('still edits and deletes my own annotation', async () => {
     const mine = point(myAuthorId, 'mine');
     useStore.setState({ annotations: [mine] });

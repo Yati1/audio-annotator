@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { Annotation, Reply } from '../features/types';
+import type { AnnotationPatch } from '../state/store';
 import { AnnotationItem } from './AnnotationItem';
 import { Empty } from './states/States';
 
@@ -14,7 +15,7 @@ interface AnnotationListProps {
   onSelect(id: string): void;
   onPlay(a: Annotation): void;
   onStop(): void;
-  onEdit(id: string, note: string): void;
+  onEdit(id: string, patch: AnnotationPatch): Promise<boolean>;
   onDelete(id: string): void;
   onAddReply(annotationId: string, text: string): void;
   onEditReply(annotationId: string, replyId: string, text: string): void;
@@ -74,7 +75,7 @@ export function AnnotationList({
           onSelect={() => onSelect(a.id)}
           onPlay={() => onPlay(a)}
           onStop={onStop}
-          onEdit={(note) => onEdit(a.id, note)}
+          onEdit={(patch) => onEdit(a.id, patch)}
           onDelete={() => onDelete(a.id)}
           onAddReply={(text) => onAddReply(a.id, text)}
           onEditReply={(replyId, text) => onEditReply(a.id, replyId, text)}

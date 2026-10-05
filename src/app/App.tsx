@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore } from '../state/store';
 import { isSupported } from '../features/audio/audio';
+import { regionFromPlayhead } from '../features/annotations/annotations';
 import { WaveformView, type WaveformHandle, type PendingRegion } from '../components/WaveformView';
 import { TransportBar } from '../components/TransportBar';
 import { AnnotationList } from '../components/AnnotationList';
@@ -59,12 +60,14 @@ export function App(): ReactNode {
   // Also reset playback state: WaveformView is torn down and rebuilt for the new url,
   // and neither the outgoing instance's teardown nor the incoming one's setup emits
   // onPlayState, so a mid-playback file switch would otherwise leave the transport
-  // stuck showing Pause with a stale playingAnnotationId.
+  // stuck showing Pause with a stale playingAnnotationId. Forget the old file's decoded
+  // duration too, so the metadata fallback applies until the new one decodes.
   useEffect(() => {
     setDraft(null);
     setDraftNote('');
     setPlaying(false);
     setPlayingAnnotationId(null);
+    setDuration(0);
   }, [objectUrl]);
 
   // Keyboard shortcuts for primary flows (FR-024).
@@ -82,14 +85,25 @@ export function App(): ReactNode {
         setDraft({ kind: 'point', startSec: waveRef.current?.getCurrentTime() ?? 0 });
         setDraftNote('');
       } else if (e.key.toLowerCase() === 'r') {
-        const start = waveRef.current?.getCurrentTime() ?? 0;
-        setDraft({ kind: 'region', startSec: start, endSec: Math.min(start + 5, duration) });
-        setDraftNote('');
+        startRegionAtPlayhead();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+    // startRegionAtPlayhead reads only `audio` and `duration`, both listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audio, duration, tutorialOpen]);
+
+  // Falls back to the file's metadata duration until the waveform has decoded, so a region
+  // started in that gap still gets a real length.
+  const startRegionAtPlayhead = () => {
+    const bounds = regionFromPlayhead(
+      waveRef.current?.getCurrentTime() ?? 0,
+      duration || (audio?.durationSec ?? 0),
+    );
+    setDraft({ kind: 'region', ...bounds });
+    setDraftNote('');
+  };
 
   const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -232,15 +246,7 @@ export function App(): ReactNode {
                 setDraft({ kind: 'point', startSec: waveRef.current?.getCurrentTime() ?? 0 });
                 setDraftNote('');
               }}
-              onStartRegionAtPlayhead={() => {
-                const start = waveRef.current?.getCurrentTime() ?? 0;
-                setDraft({
-                  kind: 'region',
-                  startSec: start,
-                  endSec: Math.min(start + 5, duration || audio.durationSec),
-                });
-                setDraftNote('');
-              }}
+              onStartRegionAtPlayhead={startRegionAtPlayhead}
             />
 
             {draft && (
@@ -286,7 +292,7 @@ export function App(): ReactNode {
               onSelect={setSelectedId}
               onPlay={playAnnotation}
               onStop={stopAnnotation}
-              onEdit={(id, note) => void editAnnotation(id, { note })}
+              onEdit={(id, patch) => editAnnotation(id, patch)}
               onDelete={(id) => void deleteAnnotation(id)}
               onAddReply={(annotationId, text) => void addReply(annotationId, text)}
               onEditReply={(annotationId, replyId, text) =>

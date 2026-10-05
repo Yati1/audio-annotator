@@ -11,21 +11,22 @@ import {
 test.describe('errors', () => {
   test('rejects a region ending at or before its start (FR-010)', async ({ app }) => {
     await app.ensureSession('Ava');
-    await app.openAudioFixture(makeWavFile({ durationSec: 1 }));
+    await app.openAudioFixture(makeWavFile({ durationSec: 4 }));
+    await app.transport.startRegion();
+    await app.draftDialog.createWithNote('Bounded region');
+    const item = app.annotations.itemByNote('Bounded region');
+    await expect(item.badge()).toContainText('0:00–0:04');
 
-    // With the playhead at the very end, 'r' clamps the region's end to the track length,
-    // so start = end — a zero-length region — with no numeric input field needed. Playing
-    // to the end gets the playhead there exactly; a click near the edge would not.
-    await app.page.keyboard.press('Space');
-    await expect.poll(() => app.transport.isPlaying()).toBe(true);
-    await expect.poll(() => app.transport.isPlaying(), { timeout: 10_000 }).toBe(false);
-
-    await app.page.keyboard.press('r');
-    await app.draftDialog.fillNote('Invalid region attempt');
-    await app.draftDialog.save();
+    await item.editBounds({ start: 3, end: 2 });
 
     await expect(app.errorAlert).toContainText('End time must be after the start time.');
-    expect(await app.annotations.count()).toBe(0);
+    // The editor stays open with the bad values, so they can be fixed.
+    await expect(item.endField()).toHaveValue('2');
+    await expect(item.badge()).toContainText('0:00–0:04');
+
+    await app.page.reload();
+    await app.waveform.waitUntilReady();
+    await expect(app.annotations.itemByNote('Bounded region').badge()).toContainText('0:00–0:04');
   });
 
   test('shows an error for a corrupt zip and leaves existing data untouched (FR-026)', async ({

@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import type { Annotation, Reply } from '../features/types';
+import type { AnnotationPatch } from '../state/store';
 import { safeAuthorColor } from '../lib/color';
 import { formatTime } from '../lib/time';
 import { ReplyThread } from './ReplyThread';
@@ -15,7 +16,8 @@ interface AnnotationItemProps {
   onSelect(): void;
   onPlay(): void;
   onStop(): void;
-  onEdit(note: string): void;
+  /** Resolves true once saved; false leaves the editor open (the store shows the error). */
+  onEdit(patch: AnnotationPatch): Promise<boolean>;
   onDelete(): void;
   onAddReply(text: string): void;
   onEditReply(replyId: string, text: string): void;
@@ -39,6 +41,9 @@ export function AnnotationItem({
 }: AnnotationItemProps): ReactNode {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(annotation.note);
+  // Kept as the typed strings, so a half-typed number isn't rewritten under the cursor.
+  const [draftStart, setDraftStart] = useState('');
+  const [draftEnd, setDraftEnd] = useState('');
 
   const activeReplies = replies.filter((r) => !r.deleted);
   const mine = annotation.authorId === myAuthorId;
@@ -48,11 +53,22 @@ export function AnnotationItem({
       ? `${formatTime(annotation.startSec)}–${formatTime(annotation.endSec ?? annotation.startSec)}`
       : formatTime(annotation.startSec);
 
-  const saveEdit = () => {
-    if (draft.trim()) {
-      onEdit(draft);
-      setEditing(false);
-    }
+  // Reload the draft from the saved annotation each time, so text typed and then
+  // cancelled doesn't come back on the next open.
+  const startEdit = () => {
+    setDraft(annotation.note);
+    setDraftStart(String(annotation.startSec));
+    setDraftEnd(annotation.endSec === null ? '' : String(annotation.endSec));
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    if (!draft.trim()) return;
+    // An empty field becomes NaN, which validation rejects with a clear message.
+    const toSec = (v: string) => (v.trim() === '' ? NaN : Number(v));
+    const patch: AnnotationPatch = { note: draft, startSec: toSec(draftStart) };
+    if (annotation.kind === 'region') patch.endSec = toSec(draftEnd);
+    if (await onEdit(patch)) setEditing(false);
   };
 
   const confirmDelete = () => {
@@ -99,7 +115,11 @@ export function AnnotationItem({
           </button>
           {mine && (
             <>
-              <button type="button" onClick={() => setEditing((e) => !e)} aria-label="Edit note">
+              <button
+                type="button"
+                onClick={() => (editing ? setEditing(false) : startEdit())}
+                aria-label="Edit"
+              >
                 ✎
               </button>
               <button
@@ -118,8 +138,37 @@ export function AnnotationItem({
       {editing && mine ? (
         <div className="annotation-edit">
           <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={2} />
+          <div className="edit-times">
+            <label>
+              {annotation.kind === 'region' ? 'Start (s)' : 'Time (s)'}
+              <input
+                type="number"
+                min={0}
+                step={0.1}
+                value={draftStart}
+                onChange={(e) => setDraftStart(e.target.value)}
+              />
+            </label>
+            {annotation.kind === 'region' && (
+              <label>
+                End (s)
+                <input
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  value={draftEnd}
+                  onChange={(e) => setDraftEnd(e.target.value)}
+                />
+              </label>
+            )}
+          </div>
           <div className="row-actions">
-            <button type="button" className="primary" onClick={saveEdit} disabled={!draft.trim()}>
+            <button
+              type="button"
+              className="primary"
+              onClick={() => void saveEdit()}
+              disabled={!draft.trim()}
+            >
               Save
             </button>
             <button type="button" onClick={() => setEditing(false)}>

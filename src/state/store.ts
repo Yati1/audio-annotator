@@ -19,6 +19,8 @@ import { SCHEMA_VERSION } from '../features/types';
 
 export type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
 
+export type AnnotationPatch = Partial<Pick<Annotation, 'note' | 'startSec' | 'endSec'>>;
+
 export interface AppState {
   status: LoadStatus;
   error: string | null;
@@ -46,10 +48,8 @@ export interface AppState {
   // annotations (US1). Edit and delete act only on this device's own items (FR-015).
   addPoint(startSec: number, note: string): Promise<string | null>;
   addRegion(startSec: number, endSec: number, note: string): Promise<string | null>;
-  editAnnotation(
-    id: string,
-    patch: Partial<Pick<Annotation, 'note' | 'startSec' | 'endSec'>>,
-  ): Promise<void>;
+  /** Resolves true once saved; false when not allowed or invalid (the error is set). */
+  editAnnotation(id: string, patch: AnnotationPatch): Promise<boolean>;
   deleteAnnotation(id: string): Promise<void>;
 
   // replies (US2)
@@ -254,13 +254,22 @@ export const useStore = create<AppState>((set, get) => ({
   async editAnnotation(id, patch) {
     const { annotations, audio, authorId } = get();
     const current = annotations.find((a) => a.id === id);
-    if (!current || !audio || current.authorId !== authorId) return;
+    if (!current || !audio) {
+      set({ error: 'This annotation no longer exists.' });
+      return false;
+    }
+    if (current.authorId !== authorId) {
+      set({ error: 'Only its author can edit this annotation.' });
+      return false;
+    }
     const res = annotationService.edit(current, patch, audio.durationSec);
     if (isErr(res)) {
       set({ error: res.error.message });
-      return;
+      return false;
     }
+    set({ error: null });
     await persistAnnotation(get, set, res.value);
+    return true;
   },
 
   async deleteAnnotation(id) {
