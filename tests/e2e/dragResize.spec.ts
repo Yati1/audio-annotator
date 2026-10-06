@@ -79,21 +79,27 @@ test.describe('dragging and resizing on the waveform (FR-008)', () => {
     });
   }
 
-  test('a drag that turns into a pan snaps the region back', async ({ app }) => {
-    await app.waveform.seekToFraction(0.35);
-    await app.transport.startRegion();
-    await app.draftDialog.createWithNote('Snap back');
-    const item = app.annotations.itemByNote('Snap back');
-    await expect(item.badge()).toContainText('0:03–0:08');
+  for (const releaseFirst of ['right', 'left'] as const) {
+    test(`a drag that turns into a pan snaps the region back (${releaseFirst} up first)`, async ({
+      app,
+    }) => {
+      await app.waveform.seekToFraction(0.35);
+      await app.transport.startRegion();
+      await app.draftDialog.createWithNote('Snap back');
+      const item = app.annotations.itemByNote('Snap back');
+      await expect(item.badge()).toContainText('0:03–0:08');
 
-    const start = await item.startSec();
+      const start = await item.startSec();
 
-    await app.waveform.wheelZoom(-200, 1);
-    // The region is already moving when the right button joins, so the pan must undo that.
-    await app.waveform.panBy(-400, { dragFirst: 20, pauseBetween: 50 });
+      await app.waveform.wheelZoom(-200, 1);
+      // The region is already moving when the right button joins, so the pan must undo that.
+      // Lifting the left button first fires a click while the right is still down. The
+      // plugin swallows it mid-drag, so it can't reach `handleClick` and clear the pan flag.
+      await app.waveform.panBy(-400, { dragFirst: 20, pauseBetween: 50, releaseFirst });
 
-    expect(await item.startSec()).toBe(start);
-  });
+      expect(await item.startSec()).toBe(start);
+    });
+  }
 
   test('saving a note in an open editor keeps a drag made meanwhile', async ({ app }) => {
     await app.transport.startRegion();
