@@ -29,6 +29,9 @@ interface WaveformViewProps {
   url: string;
   annotations: Annotation[];
   selectedId: string | null;
+  /** This device's author id. The selected annotation can be dragged and resized only if
+   *  it carries this id. */
+  myAuthorId: string;
   /** This device's own author color, used to preview a not-yet-saved drag selection. */
   authorColor: string;
   /** The region-kind draft currently being composed, if any — kept visible on the
@@ -39,6 +42,9 @@ interface WaveformViewProps {
   onPlayState(playing: boolean): void;
   onPendingRegion(region: PendingRegion): void;
   onSelectAnnotation(id: string): void;
+  /** Saves new bounds after a drag or resize (`endSec` is null for points). Resolves false
+   *  if they were rejected, and the region snaps back. */
+  onAnnotationMoved(id: string, startSec: number, endSec: number | null): Promise<boolean>;
 }
 
 /** Used only if a drag-selection happens before this device's color has resolved. */
@@ -56,6 +62,10 @@ const MAX_PX_PER_SEC = 1000;
 const ZOOM_WHEEL_SENSITIVITY = 0.0025;
 
 const preventDefault = (e: Event) => e.preventDefault();
+const stopPropagation = (e: Event) => e.stopPropagation();
+
+/** Rounds to the millisecond, so a drag doesn't store 15 decimal places. */
+const toMs = (sec: number) => Math.round(sec * 1000) / 1000;
 
 /**
  * wavesurfer.js host. Renders the waveform and existing annotations (regions + point
@@ -167,6 +177,29 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
         });
         region.remove();
       });
+      // Fires once a drag or resize of the selected annotation ends.
+      regions.on('region-updated', (region) => {
+        if (!region.id.startsWith('anno-')) return;
+        const id = region.id.slice('anno-'.length);
+        const a = cbRef.current.annotations.find((x) => x.id === id);
+        if (!a) return;
+        const revert = () =>
+          region.setOptions({
+            start: a.startSec,
+            end: a.kind === 'region' ? (a.endSec ?? a.startSec) : a.startSec,
+          });
+        // A pan that began on this region can drag it before the second button is down.
+        if (panHappenedRef.current) {
+          revert();
+          return;
+        }
+        // Rounding can land just past the end of the track, which validation rejects.
+        const clamp = (sec: number) => Math.min(toMs(sec), ws.getDuration());
+        const endSec = a.kind === 'region' ? clamp(region.end) : null;
+        void cbRef.current.onAnnotationMoved(id, clamp(region.start), endSec).then((saved) => {
+          if (!saved) revert();
+        });
+      });
       regions.on('region-clicked', (region, e) => {
         e.stopPropagation();
         if (region.id.startsWith('anno-')) {
@@ -230,12 +263,25 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
         panRef.current.lastX = e.clientX;
       };
 
+      // Scrolling stops as soon as either button comes up.
       function endPan() {
         if (!panRef.current) return;
         panRef.current = null;
         container.classList.remove('panning');
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', endPan);
+      }
+
+      // The gesture ends only when the last button comes up. Until then the regions plugin
+      // still tracks a drag begun by the left press, so its pointermoves stay blocked and
+      // the flag stays set: otherwise a move with one button still down would jump the
+      // region by the whole pan. `pointerup` fires only for that last button, and this
+      // window listener runs after the plugin's document one, so `region-updated` still
+      // sees the flag and snaps the region back.
+      function endGesture() {
+        window.removeEventListener('pointerup', endGesture);
+        window.removeEventListener('pointercancel', endGesture);
+        window.removeEventListener('pointermove', stopPropagation, { capture: true });
         // The trailing click this gesture may produce (see `handleClick` below) is
         // dispatched synchronously by the browser before any timer callback runs, so
         // by the time this fires it's already been consumed — this is just a fallback
@@ -256,6 +302,11 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
         container.classList.add('panning');
         window.addEventListener('mousemove', handleMouseMove);
         window.addEventListener('mouseup', endPan);
+        // The regions plugin tracks its drags with document-level pointermove listeners;
+        // stopping pointermove at the window keeps a pan from also dragging a region.
+        window.addEventListener('pointermove', stopPropagation, { capture: true });
+        window.addEventListener('pointerup', endGesture);
+        window.addEventListener('pointercancel', endGesture);
       };
 
       // A pan's left-button press/release still produces a native `click` on release
@@ -284,6 +335,9 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
         container.removeEventListener('contextmenu', preventDefault);
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', endPan);
+        window.removeEventListener('pointermove', stopPropagation, { capture: true });
+        window.removeEventListener('pointerup', endGesture);
+        window.removeEventListener('pointercancel', endGesture);
         container.classList.remove('panning');
         ws.destroy();
         wsRef.current = null;
@@ -309,7 +363,9 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
       needsDragColorSyncRef.current = false;
     }, [props.authorColor, loading]);
 
-    // Render existing annotations as regions/markers whenever they change.
+    // Render existing annotations as regions/markers whenever they change. Only the
+    // selected annotation, and only if this device made it, can be dragged (and resized,
+    // for regions) — so a stray drag across the waveform can't move anything.
     useEffect(() => {
       const regions = regionsRef.current;
       if (!regions || loading) return;
@@ -319,17 +375,18 @@ export const WaveformView = forwardRef<WaveformHandle, WaveformViewProps>(
       for (const a of props.annotations) {
         if (a.deleted) continue;
         const color = safeAuthorColor(a.authorColor);
+        const movable = a.id === props.selectedId && a.authorId === props.myAuthorId;
         regions.addRegion({
           id: `anno-${a.id}`,
           start: a.startSec,
           end: a.kind === 'region' ? (a.endSec ?? a.startSec) : a.startSec,
           color: a.kind === 'region' ? withAlpha(color, 0.25) : color,
           content: a.kind === 'point' ? pointMarkerContent(color) : undefined,
-          drag: false,
-          resize: false,
+          drag: movable,
+          resize: movable && a.kind === 'region',
         });
       }
-    }, [props.annotations, loading]);
+    }, [props.annotations, props.selectedId, props.myAuthorId, loading]);
 
     // Keep a persistent region showing the in-progress draft's bounds for as long as
     // its comment is being composed. The drag-created region itself is still removed
